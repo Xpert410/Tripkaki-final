@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripKaki - Travel Insurance Concierge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">🛡️</div>
+                <div>
+                    <h1 class="logo-title">TripKaki</h1>
+                    <p class="logo-subtitle">MSIG Intelligent Conversational Agent</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="mode-indicator" id="modeIndicator">
+                    <span class="mode-dot"></span>
+                    <span class="mode-text" id="modeText">Normal Mode</span>
+                </div>
+                <div class="wallet-indicator" id="walletIndicator">
+                    <span class="wallet-icon">💰</span>
+                    <span class="wallet-amount" id="walletAmount">0 MSIG</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Panel: Architecture Blocks -->
+        <aside class="left-panel">
+            <div class="panel-header">
+                <h2>TripKaki Architecture</h2>
+            </div>
+            <nav class="block-menu">
+                <div class="block-item" data-block="1">
+                    <div class="block-header">
+                        <span class="block-icon">🧠</span>
+                        <span class="block-number">BLOCK 1</span>
+                    </div>
+                    <h3 class="block-title">Policy Intelligence</h3>
+                    <p class="block-description">Taxonomy normalization & policy parsing</p>
+                </div>
+                
+                <div class="block-item" data-block="2">
+                    <div class="block-header">
+                        <span class="block-icon">💬</span>
+                        <span class="block-number">BLOCK 2</span>
+                    </div>
+                    <h3 class="block-title">Conversational FAQ</h3>
+                    <p class="block-description">Intelligent routing & recommendations</p>
+                </div>
+                
+                <div class="block-item" data-block="3">
+                    <div class="block-header">
+                        <span class="block-icon">📄</span>
+                        <span class="block-number">BLOCK 3</span>
+                    </div>
+                    <h3 class="block-title">Document Intelligence</h3>
+                    <p class="block-description">Auto-quotation from documents</p>
+                </div>
+                
+                <div class="block-item" data-block="4">
+                    <div class="block-header">
+                        <span class="block-icon">💳</span>
+                        <span class="block-number">BLOCK 4</span>
+                    </div>
+                    <h3 class="block-title">Purchase Engine</h3>
+                    <p class="block-description">Policy issuance & payment</p>
+                </div>
+                
+                <div class="block-item" data-block="5">
+                    <div class="block-header">
+                        <span class="block-icon">🎯</span>
+                        <span class="block-number">BLOCK 5</span>
+                    </div>
+                    <h3 class="block-title">MSIG Intelligence</h3>
+                    <p class="block-description">Claims data & predictions</p>
+                </div>
+            </nav>
+            
+            <!-- Career Prediction Card -->
+            <div class="career-card">
+                <div class="career-header">
+                    <span class="career-icon">🚀</span>
+                    <h3>Your Travel Profile</h3>
+                </div>
+                <div class="career-content" id="careerContent">
+                    <p class="career-text">Complete a trip to see your traveler type!</p>
+                </div>
+            </div>
+
+            <!-- Rewards Wallet -->
+            <div class="wallet-card">
+                <div class="wallet-header">
+                    <span class="wallet-icon-large">💰</span>
+                    <h3>Rewards Wallet</h3>
+                </div>
+                <div class="wallet-content">
+                    <div class="wallet-balance" id="walletBalance">
+                        <span class="balance-amount">0</span>
+                        <span class="balance-currency">MSIG Tokens</span>
+                    </div>
+                    <div class="wallet-actions">
+                        <button class="wallet-btn" id="earnRewards">Earn Rewards</button>
+                        <button class="wallet-btn" id="redeemRewards">Redeem</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Middle Panel: Chat -->
+        <main class="middle-panel">
+            <!-- Video Avatar Section -->
+            <div class="avatar-container">
+                <div class="video-avatar" id="videoAvatar">
+                    <button class="avatar-customize-btn" id="avatarCustomizeBtn" title="Customize Avatar">
+                        <span>⚙️</span>
+                    </button>
+                    <button class="voice-select-btn" id="voiceSelectBtn" title="Choose Voice">
+                        <span>🗣️</span>
+                    </button>
+                    <button class="voice-review-btn" id="voiceReviewBtn" title="Review Voice">
+                        <span>⭐</span>
+                    </button>
+                    <button class="voice-mute-btn" id="voiceMuteBtn" title="Mute/Unmute Voice">
+                        <span id="muteIcon">🔊</span>
+                    </button>
+                    <div class="avatar-placeholder">
+                        <div class="avatar-face" id="avatarFace">
+                            <div class="avatar-emoji" id="avatarEmoji">🤖</div>
+                            <div class="eye left-eye"></div>
+                            <div class="eye right-eye"></div>
+                            <div class="mouth" id="avatarMouth"></div>
+                        </div>
+                    </div>
+                    <div class="avatar-status" id="avatarStatus">Listening...</div>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <div class="messages-container" id="messages">
+                <div class="message assistant welcome-message">
+                    <div class="message-bubble">
+                        <div class="message-content">
+                            <h3>Hi! I'm TripKaki 👋</h3>
+                            <p>Your AI travel insurance concierge. I'm here to help you find the perfect coverage for your trip.</p>
+                            <p>You can:</p>
+                            <ul>
+                                <li>📄 Upload your travel itinerary</li>
+                                <li>💬 Ask me anything about coverage</li>
+                                <li>📊 Compare plans side-by-side</li>
+                                <li>💳 Purchase your policy instantly</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="file-upload-area" id="fileUploadArea">
+                    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
+                    <button id="uploadButton" class="upload-btn">
+                        <span>📄</span>
+                        <span>Upload Document</span>
+                    </button>
+                    <span id="fileName" class="file-name"></span>
+                </div>
+                <div class="input-wrapper">
+                    <button id="micButton" class="mic-btn" title="Click to speak">
+                        <span class="mic-icon">🎤</span>
+                    </button>
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Type your message here..."
+                        autocomplete="off"
+                    >
+                    <button id="sendButton" class="send-btn">
+                        <span>Send</span>
+                        <span class="send-icon">→</span>
+                    </button>
+                </div>
+                <div class="quick-replies" id="quickReplies"></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons" id="actionButtons" style="display: none;">
+                <button id="confirmButton" class="action-btn primary">Confirm</button>
+                <button id="paymentButton" class="action-btn primary">Proceed to Payment</button>
+            </div>
+        </main>
+
+        <!-- Right Panel: Insights -->
+        <aside class="right-panel">
+            <div class="panel-header">
+                <h2>Insights & Citations</h2>
+            </div>
+            
+            <!-- Policy Excerpts -->
+            <div class="insight-section" id="policyExcerpts">
+                <h3>📜 Policy Excerpts</h3>
+                <div class="excerpt-content" id="excerptContent">
+                    <p class="placeholder">No policy excerpts yet</p>
+                </div>
+            </div>
+
+            <!-- Claim Statistics -->
+            <div class="insight-section" id="claimStats">
+                <h3>📊 Claim Statistics</h3>
+                <div class="stats-content" id="statsContent">
+                    <p class="placeholder">Statistics will appear here</p>
+                </div>
+            </div>
+
+            <!-- Safety Timeline -->
+            <div class="insight-section" id="safetyTimeline">
+                <h3>⏱️ Safety Timeline</h3>
+                <div class="timeline-content" id="timelineContent">
+                    <p class="placeholder">Timeline will appear here</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Audio Player for TTS -->
+    <audio id="ttsAudio" style="display: none;"></audio>
+
+    <!-- Avatar Customization Modal -->
+    <div class="modal-overlay" id="avatarModalOverlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Customize Your Avatar</h3>
+                <button class="modal-close" id="closeAvatarModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="emoji-selector">
+                    <h4>Choose Avatar Emoji:</h4>
+                    <div class="emoji-grid">
+                        <div class="emoji-option" data-emoji="🤖">🤖</div>
+                        <div class="emoji-option" data-emoji="👨‍💼">👨‍💼</div>
+                        <div class="emoji-option" data-emoji="👩‍💼">👩‍💼</div>
+                        <div class="emoji-option" data-emoji="🧑‍🚀">🧑‍🚀</div>
+                        <div class="emoji-option" data-emoji="🦸">🦸</div>
+                        <div class="emoji-option" data-emoji="👾">👾</div>
+                        <div class="emoji-option" data-emoji="🎭">🎭</div>
+                        <div class="emoji-option" data-emoji="🦁">🦁</div>
+                        <div class="emoji-option" data-emoji="🐼">🐼</div>
+                        <div class="emoji-option" data-emoji="🦊">🦊</div>
+                        <div class="emoji-option" data-emoji="🐸">🐸</div>
+                        <div class="emoji-option" data-emoji="🐨">🐨</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelAvatarModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Selection Modal -->
+    <div class="modal-overlay" id="voiceModalOverlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Choose Your Voice</h3>
+                <button class="modal-close" id="closeVoiceModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="voice-selector">
+                    <h4>Select Voice Style:</h4>
+                    <div class="voice-grid">
+                        <div class="voice-option" data-voice="singaporean">
+                            <span class="voice-icon">🌴</span>
+                            <div class="voice-name">Singaporean</div>
+                            <div class="voice-desc">Friendly Singlish lah!</div>
+                        </div>
+                        <div class="voice-option" data-voice="professional">
+                            <span class="voice-icon">💼</span>
+                            <div class="voice-name">Professional</div>
+                            <div class="voice-desc">Clear and formal</div>
+                        </div>
+                        <div class="voice-option" data-voice="casual">
+                            <span class="voice-icon">😊</span>
+                            <div class="voice-name">Casual</div>
+                            <div class="voice-desc">Relaxed and friendly</div>
+                        </div>
+                        <div class="voice-option" data-voice="energetic">
+                            <span class="voice-icon">⚡</span>
+                            <div class="voice-name">Energetic</div>
+                            <div class="voice-desc">Lively and upbeat</div>
+                        </div>
+                    </div>
+                    <div class="current-voice" id="currentVoiceDisplay" style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                        <strong>Current Voice:</strong> <span id="currentVoiceName">Singaporean</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelVoiceModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Review Modal -->
+    <div class="modal-overlay" id="voiceReviewModalOverlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Rate Your Voice Experience</h3>
+                <button class="modal-close" id="closeVoiceReviewModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="voice-review">
+                    <h4>How would you rate the voice?</h4>
+                    <div class="rating-stars" id="ratingStars">
+                        <span class="star" data-rating="1">⭐</span>
+                        <span class="star" data-rating="2">⭐</span>
+                        <span class="star" data-rating="3">⭐</span>
+                        <span class="star" data-rating="4">⭐</span>
+                        <span class="star" data-rating="5">⭐</span>
+                    </div>
+                    <div class="rating-value" id="ratingValue" style="margin-top: 10px;"></div>
+                    <textarea id="voiceFeedback" placeholder="Share your thoughts (optional)" style="width: 100%; min-height: 80px; margin-top: 20px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary" id="submitVoiceReview">Submit Review</button>
+                <button class="modal-btn secondary" id="cancelVoiceReviewModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
