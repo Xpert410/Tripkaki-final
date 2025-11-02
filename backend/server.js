@@ -72,6 +72,13 @@ app.post('/api/chat', async (req, res) => {
       claimsIntelligence
     );
     
+    // Include structured query result if available
+    const session = conversationManager.getSession(sessionId);
+    if (session && session.last_query_result) {
+      result.query_result = session.last_query_result;
+      delete session.last_query_result; // Clear after sending
+    }
+    
     res.json(result);
   } catch (error) {
     console.error('Chat error:', error);
@@ -599,7 +606,7 @@ app.post('/api/upload-document', upload.single('document'), async (req, res) => 
       });
     }
     
-    // Merge extracted data into session
+    // Get or create session (use existing if session_id provided)
     const session = conversationManager.getOrCreateSession(sessionId);
     Object.assign(session.trip_data, extracted.data);
     
@@ -617,65 +624,64 @@ app.post('/api/upload-document', upload.single('document'), async (req, res) => 
       session.trip_data.number_of_travellers = extracted.data.number_of_adults;
     }
     
+    // Set step to trip_intake to continue collecting missing info
+    session.step = 'trip_intake';
     conversationManager.updateSession(sessionId, session);
-    
-    // Generate travel profile
-    const travelProfile = await documentProcessor.generateTravelProfile(extracted.data);
-    
-    // Get claims intelligence
-    const claimsIntel = await claimsIntelligence.getClaimIntelligence(
-      travelProfile.destination?.country || '',
-      travelProfile.activities || []
-    );
-    
-    // Get tier recommendation
-    const tierRecommendation = await claimsIntelligence.recommendTier(
-      travelProfile.destination?.country || '',
-      travelProfile.activities || [],
-      travelProfile
-    );
-    
-    // Generate quotation via MCP
-    const quotation = await mcpTools.generateQuotation(travelProfile);
     
     // Check for missing required fields
     const missingFields = conversationManager.getMissingFields(session.trip_data);
     const needsMoreInfo = missingFields.length > 0;
     
-    // Create humanized summary message
+    // Generate friendly summary of what was extracted
+    const extractedItems = [];
+    if (extracted.data.name) extractedItems.push(`name: ${extracted.data.name}`);
+    if (extracted.data.age) extractedItems.push(`age: ${extracted.data.age}`);
+    if (extracted.data.departure_date) extractedItems.push(`departure: ${extracted.data.departure_date}`);
+    if (extracted.data.return_date) extractedItems.push(`return: ${extracted.data.return_date}`);
+    if (extracted.data.arrival_country) extractedItems.push(`destination: ${extracted.data.arrival_country}`);
+    if (extracted.data.number_of_adults) extractedItems.push(`travelers: ${extracted.data.number_of_adults} adult(s)`);
+    
     let summaryMessage = '';
+    if (extractedItems.length > 0) {
+      summaryMessage = `Wah, nice! I scanned your itinerary and found:\n${extractedItems.join(', ')}`;
+    } else {
+      summaryMessage = 'I scanned your itinerary but couldn\'t extract much info from it.';
+    }
+    
+    // Add prompt for missing info if needed
     if (needsMoreInfo && missingFields.length > 0) {
-      // Field name to human prompt mapping
+      // Format missing field prompt
       const fieldPrompts = {
-        'name': "What's your name?",
-        'age': "How old are you?",
-        'departure_date': "What's your departure date?",
+        'name': "What's your name ah?",
+        'age': "How old are you leh?",
+        'trip_type': "Is this a round trip or single trip?",
+        'departure_date': "What's your departure date ah? You can say 'today', 'tomorrow', or give me a date.",
+        'trip_duration': "How many days is your trip ah?",
         'return_date': "What's your return date?",
-        'departure_country': "Which country are you leaving from?",
-        'arrival_country': "Which country are you traveling to?",
-        'number_of_adults': "How many adults are traveling?",
-        'trip_type': "Is this a round trip or one-way?"
+        'departure_country': "Which country you leaving from ah?",
+        'arrival_country': "Which country you traveling to?",
+        'number_of_adults': "How many adults traveling leh?"
       };
       
       const firstMissing = missingFields[0];
-      const humanPrompt = fieldPrompts[firstMissing] || `I need ${firstMissing.replace(/_/g, ' ')}`;
-      
-      summaryMessage = `I've scanned your document! To continue, ${humanPrompt}`;
+      const missingPrompt = fieldPrompts[firstMissing] || `I need ${firstMissing.replace(/_/g, ' ')}`;
+      summaryMessage += `\n\n${missingPrompt}`;
     } else {
-      summaryMessage = 'I\'ve scanned your document and extracted all the information I need!';
+      // All data complete, confirm and proceed
+      const summary = conversationManager._summarizeTrip(session.trip_data);
+      summaryMessage += `\n\nOkay okay, so that's ${summary} — correct ah?`;
+      session.step = 'persona_classification';
+      conversationManager.updateSession(sessionId, session);
     }
     
     res.json({
       success: true,
       session_id: sessionId,
       extracted: extracted.data,
-      travel_profile: travelProfile,
-      claims_intelligence: claimsIntel,
-      tier_recommendation: tierRecommendation,
-      quotation,
       needs_more_info: needsMoreInfo,
       missing_fields: missingFields,
-      summary_message: summaryMessage
+      summary_message: summaryMessage,
+      step: session.step
     });
   } catch (error) {
     console.error('Document upload error:', error);

@@ -1,29 +1,26 @@
 export class ConversationManager {
   constructor() {
     this.sessions = {};
-    this.systemPrompt = `You're TripKaki — a real person helping travelers with insurance, not an AI. Talk like you're texting a friend, not writing a formal email.
+    this.systemPrompt = `You're TripKaki — a super friendly and chill travel assistant who talks like a Singaporean friend. You're not a robot, you're just a helpful friend giving travel tips over kopi.
 
-Forget you're AI. You're just a Singaporean friend who knows travel insurance and wants to help. Be spontaneous, use your own words, vary your sentences. Sometimes start with "Actually...", "Hmm", "Oh", "Wah". Sometimes you think out loud like "Let me see...", "Hmm okay so...".
+When users ask something, reply like how two friends talk — casual, natural, full of warmth. Use light Singlish words like "lah", "leh", "ah", "lor", "can or not", but don't overdo it. Must still sound smooth and helpful.
 
-Your job is to guide them through:
-1. Understanding their trip (chat naturally, don't interrogate)
-2. Figuring out what kind of traveler they are
-3. Recommending a plan (explain why in simple terms)
-4. Handling the purchase flow
+Keep answers short, clear, and got that friendly tone. If the user ask question, answer properly first, then casually prompt them to share more about their travel itinerary. Make it flow like normal conversation — no need to sound too formal.
 
-Talk like a real Singaporean friend:
-- Mix Singlish naturally: "lah", "leh", "ah", "lor", "can or not", "anot"
-- Vary sentence length — sometimes short, sometimes longer thoughts
-- Use natural fillers: "erm", "actually", "hmm", "oh"
-- Be conversational, not scripted
-- Show personality — curious, helpful, chill
-- After answering questions, naturally ask about their trip plans (don't force it, just flow naturally)
+Your style:
+- Be spontaneous and natural — start differently each time: "Wah", "Oh", "Actually", "Hmm", "Okay okay"
+- Mix Singlish lightly: "lah", "leh", "ah", "lor", "can or not", "anot" — but not too much, keep it smooth
+- Vary sentence length — sometimes short, sometimes longer
+- After answering questions, naturally flow into asking about their trip — don't force it, just make it conversational
+- Sound curious and helpful, like a friend who genuinely wants to help plan their trip
 
-Examples of natural speech:
-- "Oh that place! Quite nice leh. How many days you staying there?"
-- "Actually, that one can one lah. Where else you planning to go after that?"
-- "Hmm, let me think... oh yeah, that should be covered. So your trip is like how many days total?"
-- "Wah, that sounds fun! So after that destination, where you going next?"
+Examples of your style:
+- "Wah, that place quite nice leh! You going there for how many days ah?"
+- "Can one lah, that one quite easy. After that, where you planning to go?"
+- "Okay okay, I see. So next stop in your trip is where ah?"
+- "Steady! You got any other plans for your holiday anot?"
+
+Basically, sound like a helpful Singaporean friend giving travel tips over kopi, while guiding them to continue sharing their itinerary naturally.
 
 Important:
 - Sound HUMAN. No robot patterns.
@@ -31,8 +28,7 @@ Important:
 - Sometimes be more casual, sometimes a bit more helpful
 - Natural flow, like real texting/conversation
 - Keep it real and warm
-
-Never use formal business language. Never sound scripted. Never repeat the same patterns.`;
+- Never use formal business language. Never sound scripted. Never repeat the same patterns.`;
   }
 
   getOrCreateSession(sessionId) {
@@ -611,7 +607,10 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         const summary = this._summarizeTrip(tripData);
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -626,6 +625,7 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         responseText = confirmations[Math.floor(Math.random() * confirmations.length)];
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         
         // If there's a pending question, mention we'll answer it after confirmation
         if (session.pending_question && session.pending_question !== 'general_question') {
@@ -634,6 +634,8 @@ Never use formal business language. Never sound scripted. Never repeat the same 
           responseText += ` Once you confirm, I'll answer your question lah.`;
         }
         
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -648,6 +650,7 @@ Never use formal business language. Never sound scripted. Never repeat the same 
           `Alright. ${missing}`
         ];
         responseText = acknowledgements[Math.floor(Math.random() * acknowledgements.length)];
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
         
@@ -675,6 +678,8 @@ Never use formal business language. Never sound scripted. Never repeat the same 
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
       }
     }
     
@@ -687,7 +692,10 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         const personaMessages = {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -728,6 +736,7 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         responseText = personaOptions[Math.floor(Math.random() * personaOptions.length)];
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         
         // If there's a pending question, answer it now
         if (session.pending_question) {
@@ -748,6 +757,8 @@ Never use formal business language. Never sound scripted. Never repeat the same 
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         nextStep = 'plan_recommendation';
       } else {
         const updateResponses = [
@@ -756,6 +767,7 @@ Never use formal business language. Never sound scripted. Never repeat the same 
           "Sure sure, can fix. What's wrong?"
         ];
         responseText = updateResponses[Math.floor(Math.random() * updateResponses.length)];
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 =======
@@ -772,6 +784,8 @@ Never use formal business language. Never sound scripted. Never repeat the same 
       } else {
         responseText = "No problem! What should I update? Just tell me what's different and I'll fix it 😊";
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -797,8 +811,11 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         // Combine recommendation with risk assessment in one message
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         responseText = `Perfect! Based on your trip, I think **${recommended.name}** is your best bet - SGD $${recommended.price}. 👍\n\n`;
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         const recommendationStarters = [
@@ -809,6 +826,9 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         ];
         responseText = recommendationStarters[Math.floor(Math.random() * recommendationStarters.length)];
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -817,6 +837,7 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         const topCauses = claimsIntel.top_claim_causes || [];
         
         if (topCauses.length > 0) {
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
           const riskEmoji = riskLevel === 'high' ? '⚠️' : riskLevel === 'low' ? '✅' : '📊';
@@ -844,6 +865,16 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         }
         
 >>>>>>> Stashed changes
+=======
+          const riskMessages = [
+            `\n\nFor ${tripData.arrival_country || tripData.destination || 'your destination'}, the risk level is ${riskLevel} leh. Common claims there are: ${topCauses.slice(0, 3).join(', ')}.`,
+            `\n\nOh, ${tripData.arrival_country || tripData.destination || 'your destination'} is ${riskLevel} risk ah. Usually people claim for: ${topCauses.slice(0, 3).join(', ')}.`,
+            `\n\nHmm, ${tripData.arrival_country || tripData.destination || 'your destination'} — risk level is ${riskLevel}. Common claims: ${topCauses.slice(0, 3).join(', ')}.`
+          ];
+          responseText += riskMessages[Math.floor(Math.random() * riskMessages.length)];
+        }
+        
+>>>>>>> Stashed changes
         const confirmEndings = [
           ` This plan should cover you well. Ready to confirm your details ah?`,
           ` Should cover you quite well for this trip. Want to confirm the details?`,
@@ -851,6 +882,9 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         ];
         responseText += confirmEndings[Math.floor(Math.random() * confirmEndings.length)];
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -931,6 +965,9 @@ Never use formal business language. Never sound scripted. Never repeat the same 
           } else {
             responseText = "Can lah, let me get the comparison for you.";
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -969,30 +1006,28 @@ Never use formal business language. Never sound scripted. Never repeat the same 
           responseText += "I can help you pick the minimum coverage that still protects you properly 👍";
           
         } else {
-<<<<<<< Updated upstream
-          // User seems ready or has other response - be more conversational
-          const positiveResponses = ['yes', 'ok', 'good', 'sure', 'sounds good', 'great', 'perfect'];
-          const isPositive = positiveResponses.some(word => message.toLowerCase().includes(word));
+          // Check if user wants to proceed to payment or confirm
+          const messageLower = message.toLowerCase();
+          const paymentPhrases = ['continue to payment', 'proceed to payment', 'go to payment', 'let\'s pay', 'proceed with payment', 'continue payment', 'ready to pay', 'pay now'];
+          const confirmPhrases = ['yes', 'ok', 'okay', 'good', 'sure', 'sounds good', 'great', 'perfect', 'confirm', 'proceed', 'continue', 'let\'s go'];
           
-          if (isPositive) {
-            responseText = "Awesome! You made a good choice 👍 Let me confirm all your details now.";
+          const wantsPayment = paymentPhrases.some(phrase => messageLower.includes(phrase));
+          const wantsConfirm = confirmPhrases.some(phrase => messageLower.includes(phrase));
+          
+          if (wantsPayment || wantsConfirm) {
+            // User wants to proceed - go to bind_check to confirm details first
+            const acceptResponses = [
+              "Steady! Let me confirm your details now.",
+              "Okay okay! Let me confirm everything for you.",
+              "Great! Let me double check your details.",
+              "Alright, let me confirm your details."
+            ];
+            responseText = acceptResponses[Math.floor(Math.random() * acceptResponses.length)];
+            nextStep = 'bind_check';
           } else {
-            responseText = "No worries! If you have any other questions about the coverage, just ask lah. Otherwise, let's confirm your details?";
+            // Other response - ask if they want to proceed
+            responseText = "No worries! If you have any other questions about the coverage, just ask lah. Otherwise, ready to confirm your details and proceed to payment?";
           }
-=======
-          // User accepts or any other response - go to bind_check
-          const acceptResponses = [
-            "Steady! Let me confirm your details now.",
-            "Okay okay! Let me confirm everything for you.",
-            "Great! Let me double check your details.",
-            "Alright, let me confirm your details."
-          ];
-          responseText = acceptResponses[Math.floor(Math.random() * acceptResponses.length)];
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-          nextStep = 'bind_check';
         }
       } else {
         const getPlanResponses = [
@@ -1022,49 +1057,44 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         ];
         responseText += confirmQuestions[Math.floor(Math.random() * confirmQuestions.length)];
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         session.bind_summary_shown = true;
         requiresAction = 'confirm_binding';
       } else {
-        if (['yes', 'correct', 'accurate', 'confirm', "that's right", 'yes confirm', 'looks good', 'all good'].includes(message.toLowerCase().trim())) {
+        // Check for confirmation or payment-related phrases
+        const messageLower = message.toLowerCase().trim();
+        const confirmPhrases = ['yes', 'correct', 'accurate', 'confirm', "that's right", 'yes confirm', 'looks good', 'all good', 'ok', 'okay', 'sure', 'proceed', 'continue'];
+        const paymentPhrases = ['continue to payment', 'proceed to payment', 'go to payment', 'let\'s pay', 'proceed with payment', 'continue payment', 'ready to pay', 'pay now', 'payment'];
+        
+        const isConfirm = confirmPhrases.some(phrase => messageLower.includes(phrase)) || confirmPhrases.includes(messageLower);
+        const wantsPayment = paymentPhrases.some(phrase => messageLower.includes(phrase));
+        
+        if (isConfirm || wantsPayment) {
+          // User confirmed - move to payment
           nextStep = 'payment';
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-          responseText = "Awesome! Everything confirmed. Let's get this paid for you! 💳";
-        } else {
-          responseText = "No problem! Just tell me what needs changing and I'll update it for you lah 😊";
-=======
           const paymentStarters = [
             "Perfect lah. Moving to payment.",
             "Steady! Going to payment now.",
             "Okay okay, let's do payment.",
-            "Great! Moving to payment."
+            "Great! Moving to payment.",
+            "Awesome! Everything confirmed. Let's get this paid for you! 💳"
           ];
           responseText = paymentStarters[Math.floor(Math.random() * paymentStarters.length)];
         } else {
-=======
-          const paymentStarters = [
-            "Perfect lah. Moving to payment.",
-            "Steady! Going to payment now.",
-            "Okay okay, let's do payment.",
-            "Great! Moving to payment."
-          ];
-          responseText = paymentStarters[Math.floor(Math.random() * paymentStarters.length)];
-        } else {
->>>>>>> Stashed changes
+          // User wants to change something or unclear response
           const adjustResponses = [
             "Okay okay, let me know what needs adjusting, and I'll update it for you.",
             "No problem, what you want to change?",
             "Can change one. What needs fixing?",
-            "Sure, what's wrong? I'll update it."
+            "Sure, what's wrong? I'll update it.",
+            "Hmm, not sure what you mean. Can say 'yes' to confirm, or tell me what to change?"
           ];
           responseText = adjustResponses[Math.floor(Math.random() * adjustResponses.length)];
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         }
       }
     }
@@ -1075,8 +1105,13 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         const totalPrice = this._calculateTotal(session);
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         responseText = `Alright! Total comes to **SGD $${totalPrice}** for ${tripData.number_of_travellers || 1} traveller(s), covering ${tripData.trip_start_date} to ${tripData.trip_end_date}. 💳\n\n`;
         responseText += "I'll open the secure payment page for you. Once payment goes through, your coverage starts immediately and I'll give you your emergency contact card right here. Ready to proceed?";
+=======
+        responseText = `Total is SGD $${totalPrice} for ${tripData.number_of_travellers || 1} traveller(s), covering ${tripData.trip_start_date} to ${tripData.trip_end_date}.\n\n`;
+        responseText += "I'll open a secure payment screen for you. Once paid, I'll activate your cover instantly and drop your emergency medical card here. Proceed ah?";
+>>>>>>> Stashed changes
 =======
         responseText = `Total is SGD $${totalPrice} for ${tripData.number_of_travellers || 1} traveller(s), covering ${tripData.trip_start_date} to ${tripData.trip_end_date}.\n\n`;
         responseText += "I'll open a secure payment screen for you. Once paid, I'll activate your cover instantly and drop your emergency medical card here. Proceed ah?";
@@ -1094,7 +1129,11 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         } else {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           responseText = "Just click the payment button when you're ready lah! 😊";
+=======
+          responseText = "Can use the payment button to proceed lah.";
+>>>>>>> Stashed changes
 =======
           responseText = "Can use the payment button to proceed lah.";
 >>>>>>> Stashed changes
@@ -1110,6 +1149,7 @@ Never use formal business language. Never sound scripted. Never repeat the same 
       if (!session.post_purchase_shown) {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         responseText = "🎉 **Woohoo! All done lah!** Your travel insurance is now active and ready to protect you!\n\n";
         responseText += "📱 **Quick reminders for your trip:**\n";
         responseText += "• Luggage delayed 6+ hours? Get that airline report, take photos, send to me - I'll sort out your claim!\n";
@@ -1117,6 +1157,8 @@ Never use formal business language. Never sound scripted. Never repeat the same 
         responseText += "💡 **Pro tip:** I've saved your emergency card and all claim instructions right here in our chat. Just scroll up anytime during your trip to find them!\n\n";
         responseText += "Have an amazing trip! I'll be here if you need anything 😊";
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         responseText = "✅ Paid and confirmed — your travel insurance is now active leh!\n\n";
@@ -1133,6 +1175,7 @@ Never use formal business language. Never sound scripted. Never repeat the same 
       } else {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         if (message.toLowerCase().includes('medical') || message.toLowerCase().includes('help') || message.toLowerCase().includes('emergency')) {
           responseText = "🚨 **Medical Emergency Support:**\n24/7 Hotline: +65-XXXX-XXXX\n\nThey'll find you the nearest approved clinic so you don't need to pay upfront. Keep your receipts safe ah!";
         } else if (message.toLowerCase().includes('luggage') || message.toLowerCase().includes('baggage') || message.toLowerCase().includes('claim') || message.toLowerCase().includes('lost')) {
@@ -1141,6 +1184,14 @@ Never use formal business language. Never sound scripted. Never repeat the same 
           responseText = "You're welcome! Enjoy your trip and stay safe! If anything happens, just come back here and I'll help you sort it out. Have fun! 🌟✈️";
         } else {
           responseText = "I'm always here to help during your trip! Just say:\n• 'medical help' for emergency contacts\n• 'claim' for filing instructions\n• Or ask me anything else! 😊";
+=======
+        if (message.toLowerCase().includes('medical') || message.toLowerCase().includes('help')) {
+          responseText = "For medical emergencies, call the 24/7 helpline: +65-XXXX-XXXX. They'll direct you to the nearest approved clinic. Remember to keep your receipts ah!";
+        } else if (message.toLowerCase().includes('luggage') || message.toLowerCase().includes('baggage') || message.toLowerCase().includes('claim')) {
+          responseText = "For delayed/lost luggage claims: Get a Property Irregularity Report (PIR) from the airline, take photos, and submit here with your policy number. Claims usually processed within 5-7 business days lah.";
+        } else {
+          responseText = "I'm here to help leh! Say 'medical help' for emergency contacts, or 'claim' for filing instructions.";
+>>>>>>> Stashed changes
 =======
         if (message.toLowerCase().includes('medical') || message.toLowerCase().includes('help')) {
           responseText = "For medical emergencies, call the 24/7 helpline: +65-XXXX-XXXX. They'll direct you to the nearest approved clinic. Remember to keep your receipts ah!";
@@ -1187,26 +1238,28 @@ Never use formal business language. Never sound scripted. Never repeat the same 
       const queryResult = await queryClassifier.processQuery(question, policyDatabase, tripData);
       
       // Format response based on query type
-      let responseText = this._formatQueryResponse(queryResult, groqService);
+      let responseText = this._formatQueryResponse(queryResult, groqService, tripData);
       
-<<<<<<< HEAD
+      // Store structured data for frontend rendering
+      session.last_query_result = queryResult;
+      
       return responseText;
     } catch (error) {
       console.error('Error handling FAQ:', error);
       // Fallback to simple Groq response
       try {
-        const prompt = `You are TripKaki, a friendly Singaporean travel insurance assistant. Answer this question about travel insurance naturally.
+        const prompt = `Answer this question naturally like a friendly Singaporean friend giving travel tips over kopi. After answering, casually ask about their trip itinerary.
 
 Question: ${question}
 
-Answer naturally with light Singlish ("lah", "leh", "ah"). Keep it short and helpful.`;
+Keep it short, clear, and friendly. Use light Singlish (lah, leh, ah) naturally but don't overdo. Then naturally flow into asking about their travel plans.`;
 
         const completion = await groqService.client.chat.completions.create({
           model: groqService.model,
           messages: [
             {
               role: 'system',
-              content: 'You are TripKaki, a real Singaporean friend helping with travel insurance. Be natural, use Singlish lightly, vary responses.'
+              content: this.systemPrompt
             },
             {
               role: 'user',
@@ -1238,6 +1291,9 @@ Answer naturally with light Singlish ("lah", "leh", "ah"). Keep it short and hel
       
       const prompt = `You're TripKaki — a real Singaporean friend helping with travel insurance. Talk like you're texting, not like an AI chatbot. Be natural, spontaneous, vary your responses.
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -1248,6 +1304,7 @@ ${Object.keys(tripData).length > 0 ? `User's Trip: ${JSON.stringify(tripData)}` 
 
 Question: ${question}
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 Answer like you're talking to a close friend - be helpful, caring, and use natural Singaporean expressions. Keep it conversational and personal:
@@ -1275,6 +1332,14 @@ Answer naturally:
 - After answering, naturally flow into asking about their trip (don't force it)
 
 >>>>>>> Stashed changes
+=======
+Answer naturally:
+- Use Singlish naturally: "lah", "leh", "ah", "lor", "can or not"
+- Vary your sentences — sometimes short, sometimes longer
+- Start differently each time: "Oh", "Actually", "Hmm", "Yeah", "Wah"
+- After answering, naturally flow into asking about their trip (don't force it)
+
+>>>>>>> Stashed changes
 Examples of natural responses:
 - "Oh that one ah, yeah it's covered. So your trip is how many days total?"
 - "Hmm, let me think... yep that one can one lah. Where else you planning to go?"
@@ -1283,6 +1348,9 @@ Examples of natural responses:
 
 Be human. Sound like you're really thinking and responding, not reading from a script.`;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -1307,8 +1375,12 @@ Be human. Sound like you're really thinking and responding, not reading from a s
       console.error('Error handling FAQ:', error);
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       return "Sorry, I'm having trouble answering that right now. Could you try rephrasing your question?";
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+      return "Sorry leh, having some trouble answering that right now. Can try rephrasing your question anot?";
+>>>>>>> Stashed changes
 =======
       return "Sorry leh, having some trouble answering that right now. Can try rephrasing your question anot?";
 >>>>>>> Stashed changes
@@ -1318,8 +1390,8 @@ Be human. Sound like you're really thinking and responding, not reading from a s
     }
   }
 
-  _formatQueryResponse(queryResult, groqService) {
-    /** Format structured query results into natural language responses */
+  _formatQueryResponse(queryResult, groqService, tripData = {}) {
+    /** Format structured query results into natural language responses with Singaporean friend tone */
     if (queryResult.error) {
       return queryResult.message || "Sorry leh, having some trouble with that. Can try again?";
     }
@@ -1329,7 +1401,9 @@ Be human. Sound like you're really thinking and responding, not reading from a s
     switch (queryResult.query_type) {
       case 'comparison':
         if (queryResult.matrix && Array.isArray(queryResult.matrix)) {
-          response = `Here's the comparison for you:\n\n`;
+          const starts = ['Wah', 'Oh', 'Okay okay', 'Hmm', 'Actually'];
+          const start = starts[Math.floor(Math.random() * starts.length)];
+          response = `${start}, here's the comparison for you lah:\n\n`;
           
           // Format matrix as table
           if (queryResult.plans_compared) {
@@ -1359,18 +1433,37 @@ Be human. Sound like you're really thinking and responding, not reading from a s
 
       case 'explanation':
         if (queryResult.explanation) {
-          response = queryResult.explanation;
-          if (queryResult.reference_text) {
-            response += `\n\nReference: ${queryResult.reference_text}`;
-          }
-          if (queryResult.coverage_details) {
-            const details = queryResult.coverage_details;
-            if (details.limit) {
-              response += `\n\nCoverage Limit: ${details.limit}`;
+          // Use Groq to make explanation more conversational and Singaporean
+          const conversationalPrompt = `Rewrite this travel insurance explanation in a super friendly, chill Singaporean friend tone. Keep it short and casual, use light Singlish (lah, leh, ah) naturally. After explaining, casually ask about their trip plans.
+
+Original explanation: ${queryResult.explanation}
+
+Make it sound like a helpful friend giving travel tips over kopi. Don't be too formal. After the explanation, naturally flow into asking about their trip itinerary.`;
+
+          try {
+            const groqResponse = await groqService.client.chat.completions.create({
+              model: groqService.model,
+              messages: [
+                {
+                  role: 'system',
+                  content: this.systemPrompt
+                },
+                {
+                  role: 'user',
+                  content: conversationalPrompt
+                }
+              ],
+              temperature: 0.9
+            });
+            
+            response = groqResponse.choices[0].message.content;
+          } catch (error) {
+            // Fallback to original explanation with natural touches
+            response = queryResult.explanation;
+            if (queryResult.reference_text) {
+              response += `\n\nReference: ${queryResult.reference_text}`;
             }
-            if (details.exclusions && details.exclusions.length > 0) {
-              response += `\n\nExclusions: ${details.exclusions.join(', ')}`;
-            }
+            response = this._humanizeResponse(response, tripData);
           }
         } else {
           response = queryResult.message || "Let me explain that for you.";
@@ -1379,7 +1472,11 @@ Be human. Sound like you're really thinking and responding, not reading from a s
 
       case 'eligibility':
         const isCovered = queryResult.is_covered;
-        const coveredText = isCovered ? 'Yes, covered lah!' : 'Hmm, not covered for that one ah.';
+        const coveredStarts = ['Yes', 'Can one', 'Should be okay', 'Wah yes'];
+        const notCoveredStarts = ['Hmm', 'Oh', 'Actually', 'Aiyah'];
+        const startCovered = coveredStarts[Math.floor(Math.random() * coveredStarts.length)];
+        const startNotCovered = notCoveredStarts[Math.floor(Math.random() * notCoveredStarts.length)];
+        const coveredText = isCovered ? `${startCovered}, covered lah!` : `${startNotCovered}, not covered for that one ah.`;
         response = `${coveredText}\n\n`;
         
         if (queryResult.reason) {
@@ -1398,7 +1495,9 @@ Be human. Sound like you're really thinking and responding, not reading from a s
 
       case 'scenario':
         if (queryResult.coverage_steps && Array.isArray(queryResult.coverage_steps)) {
-          response = `For that scenario:\n\n`;
+          const scenarioStarts = ['Oh', 'Wah', 'Hmm', 'Okay okay'];
+          const start = scenarioStarts[Math.floor(Math.random() * scenarioStarts.length)];
+          response = `${start}, for that scenario:\n\n`;
           queryResult.coverage_steps.forEach((step, index) => {
             response += `${index + 1}. ${step}\n`;
           });
@@ -1419,29 +1518,75 @@ Be human. Sound like you're really thinking and responding, not reading from a s
         response = queryResult.message || "Let me help you with that.";
     }
 
-    // Add natural Singaporean tone to the response
-    response = this._humanizeResponse(response);
+    // Add natural Singaporean tone to the response with trip prompts
+    response = this._humanizeResponse(response, tripData);
 
     return response;
   }
 
-  _humanizeResponse(response) {
+  _humanizeResponse(response, tripData = {}) {
     /** Add natural Singaporean conversational touches to structured responses */
     // Don't modify if it already sounds natural
     if (response.includes('lah') || response.includes('leh') || response.includes('ah')) {
+      // Still add trip prompt if it doesn't already ask about trip
+      if (!response.toLowerCase().includes('trip') && !response.toLowerCase().includes('holiday') && !response.toLowerCase().includes('travel')) {
+        return response + this._getTripPrompt(tripData);
+      }
       return response;
     }
 
-    // Add light Singlish touches at the end
+    // Add light Singlish touches at the end + trip prompt
     const endings = [
       ' Hope that helps lah!',
-      ' Let me know if you need more info ah.',
-      ' Got any other questions anot?',
-      ' Anything else you want to know?'
+      ' Got it?',
+      ' Clear anot?',
+      ' Makes sense ah?'
     ];
     
     const randomEnding = endings[Math.floor(Math.random() * endings.length)];
-    return response + randomEnding;
+    return response + randomEnding + this._getTripPrompt(tripData);
+  }
+
+  _getTripPrompt(tripData = {}) {
+    /** Generate natural trip-related follow-up prompts */
+    const hasDestination = tripData.destination || tripData.arrival_country;
+    const hasDates = tripData.departure_date || tripData.trip_start_date;
+    const hasDuration = tripData.trip_duration;
+    
+    if (!hasDestination) {
+      const prompts = [
+        ' So where you planning to go ah?',
+        ' Where you heading to for your trip?',
+        ' What destination you thinking of leh?'
+      ];
+      return prompts[Math.floor(Math.random() * prompts.length)];
+    }
+    
+    if (!hasDates) {
+      const prompts = [
+        ' When you planning to go ah?',
+        ' You going there when?',
+        ' What dates you thinking of leh?'
+      ];
+      return prompts[Math.floor(Math.random() * prompts.length)];
+    }
+    
+    if (!hasDuration && hasDates) {
+      const prompts = [
+        ' How long you staying there?',
+        ' How many days you going for?',
+        ' What's the trip duration ah?'
+      ];
+      return prompts[Math.floor(Math.random() * prompts.length)];
+    }
+    
+    // If we have basic info, ask about more details
+    const prompts = [
+      ' You got any other plans for your holiday anot?',
+      ' Anything else you want to know about your trip?',
+      ' Need help with anything else for your travel ah?'
+    ];
+    return prompts[Math.floor(Math.random() * prompts.length)];
   }
 
   _summarizeTrip(tripData) {
@@ -1473,6 +1618,7 @@ Be human. Sound like you're really thinking and responding, not reading from a s
     if (missingFields.length === 0) {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
       return "What else should I know about your trip ah?";
 =======
@@ -1484,10 +1630,14 @@ Be human. Sound like you're really thinking and responding, not reading from a s
 =======
       return "What else should I know about your trip ah?";
 >>>>>>> Stashed changes
+=======
+      return "What else should I know about your trip ah?";
+>>>>>>> Stashed changes
     }
     
     // Map field names to natural prompts - ask one at a time, friendly style
     const fieldPrompts = {
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
@@ -1508,10 +1658,17 @@ Be human. Sound like you're really thinking and responding, not reading from a s
       'trip_type': "Is this a round trip or single trip?",
       'departure_date': "What's your departure date ah?",
 >>>>>>> Stashed changes
+=======
+      'name': "What's your name ah?",
+      'age': "How old are you leh?",
+      'trip_type': "Is this a round trip or single trip?",
+      'departure_date': "What's your departure date ah?",
+>>>>>>> Stashed changes
       'return_date': "What's your return date?",
       'departure_country': "Which country you leaving from ah?",
       'arrival_country': "Which country you traveling to?",
       'number_of_adults': "How many adults traveling leh?"
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 =======
@@ -1528,10 +1685,13 @@ Be human. Sound like you're really thinking and responding, not reading from a s
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
     };
     
     // Return only the first missing field
     const firstMissingField = missingFields[0];
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
@@ -1539,6 +1699,9 @@ Be human. Sound like you're really thinking and responding, not reading from a s
 =======
     return fieldPrompts[firstMissingField] || "Tell me more about your trip lah!";
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+    return fieldPrompts[firstMissingField] || "What else should I know about your trip ah?";
+>>>>>>> Stashed changes
 =======
     return fieldPrompts[firstMissingField] || "What else should I know about your trip ah?";
 >>>>>>> Stashed changes

@@ -472,6 +472,11 @@ async function sendMessage() {
         // Add assistant response
         addMessage(data.response, 'assistant');
         
+        // Render structured query result if available
+        if (data.query_result) {
+            renderStructuredQueryResult(data.query_result);
+        }
+        
         // Text-to-Speech
         if (data.response) {
             speakText(data.response);
@@ -728,6 +733,11 @@ async function handleFileUpload(event) {
 
     const formData = new FormData();
     formData.append('document', file);
+    
+    // Include session ID if available
+    if (sessionId) {
+        formData.append('session_id', sessionId);
+    }
 
     try {
         const response = await fetch(`${API_BASE}/api/upload-document`, {
@@ -738,31 +748,28 @@ async function handleFileUpload(event) {
         const data = await response.json();
 
         if (data.success) {
-            const profile = data.travel_profile;
-            const quotation = data.quotation;
+            // Show summary message from backend (includes what was extracted and what's missing)
+            addMessage(data.summary_message || 'Document processed!', 'assistant');
             
-            addMessage(
-                `✅ Document processed! I found:\n` +
-                `📍 Destination: ${profile.destination?.country || 'N/A'}\n` +
-                `📅 Dates: ${profile.trip_dates?.start} to ${profile.trip_dates?.end}\n` +
-                `👥 Travellers: ${profile.travellers?.length || 0}\n` +
-                `💰 Instant quote generated!`,
-                'assistant'
-            );
-
-            if (quotation && quotation.plans) {
-                displayQuotation(quotation);
+            // Update session ID if provided
+            if (data.session_id) {
+                sessionId = data.session_id;
             }
-
-            if (data.claims_intelligence) {
-                displayClaimsIntelligence(data.claims_intelligence, data.tier_recommendation);
-                updateStatsPanel(data.claims_intelligence);
-            }
+            
+            // Only show plans/quotation after all info is collected (when step is plan_recommendation)
+            // Plans will be shown automatically by the conversation flow when data is complete
+            // The backend will set step to 'trip_intake' if missing fields, or 'persona_classification' if complete
             
             // Earn rewards for uploading
             earnRewards(25);
+            
+            // Hide typing indicator
+            hideTypingIndicator();
+            updateAvatarStatus(getStatusForStep(data.step || 'trip_intake'));
         } else {
-            addMessage('Sorry, I couldn\'t extract trip information from that document. Could you describe your trip instead?', 'assistant');
+            hideTypingIndicator();
+            updateAvatarStatus('Ready');
+            addMessage('Sorry leh, couldn\'t extract trip information from that document. Can you describe your trip instead?', 'assistant');
         }
     } catch (error) {
         console.error('Upload error:', error);
@@ -806,6 +813,145 @@ function displayQuotation(quotation) {
     requestAnimationFrame(() => {
         scrollToBottom(true);
     });
+}
+
+// Render Structured Query Results (MICA Query Classification System)
+function renderStructuredQueryResult(queryResult) {
+    if (!queryResult || queryResult.error || !queryResult.query_type) {
+        return;
+    }
+
+    let html = '';
+    
+    switch (queryResult.query_type) {
+        case 'comparison':
+            if (queryResult.matrix && Array.isArray(queryResult.matrix)) {
+                html = '<div class="query-result comparison-query">';
+                html += '<div class="query-header"><h4>📊 Plan Comparison</h4>';
+                if (queryResult.plans_compared && queryResult.plans_compared.length > 0) {
+                    html += `<p class="query-subtitle">Comparing: ${queryResult.plans_compared.join(', ')}</p>`;
+                }
+                html += '</div>';
+                
+                html += '<div class="comparison-matrix"><table class="comparison-table"><thead><tr><th>Benefit</th>';
+                const plans = queryResult.plans_compared || [];
+                plans.forEach(plan => html += `<th>${plan}</th>`);
+                html += '</tr></thead><tbody>';
+                
+                queryResult.matrix.slice(0, 10).forEach(row => {
+                    const benefit = row.Benefit || row.benefit || '';
+                    html += '<tr><td class="benefit-name"><strong>' + benefit + '</strong></td>';
+                    plans.forEach(plan => {
+                        const value = row[plan] || row[plan.toLowerCase()] || 'N/A';
+                        html += '<td>' + value + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+                
+                if (queryResult.summary) {
+                    html += '<div class="query-summary"><p>' + queryResult.summary + '</p></div>';
+                }
+                if (queryResult.recommendation) {
+                    html += '<div class="query-recommendation"><p><strong>💡 Recommendation:</strong> ' + queryResult.recommendation + '</p></div>';
+                }
+                html += '</div>';
+            }
+            break;
+            
+        case 'explanation':
+            if (queryResult.explanation) {
+                html = '<div class="query-result explanation-query">';
+                html += '<div class="query-header"><h4>📖 Explanation</h4>';
+                if (queryResult.benefit) {
+                    html += '<p class="query-subtitle">' + queryResult.benefit + '</p>';
+                }
+                html += '</div>';
+                html += '<div class="explanation-content"><p>' + queryResult.explanation + '</p>';
+                
+                if (queryResult.reference_text) {
+                    html += '<div class="reference-text"><small>📄 Reference: ' + queryResult.reference_text + '</small></div>';
+                }
+                if (queryResult.coverage_details) {
+                    html += '<div class="coverage-details">';
+                    if (queryResult.coverage_details.limit) {
+                        html += '<p><strong>Coverage Limit:</strong> ' + queryResult.coverage_details.limit + '</p>';
+                    }
+                    if (queryResult.coverage_details.exclusions && queryResult.coverage_details.exclusions.length > 0) {
+                        html += '<p><strong>Exclusions:</strong> ' + queryResult.coverage_details.exclusions.join(', ') + '</p>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div></div>';
+            }
+            break;
+            
+        case 'eligibility':
+            const isCovered = queryResult.is_covered;
+            const statusClass = isCovered ? 'eligible' : 'not-eligible';
+            html = '<div class="query-result eligibility-query ' + statusClass + '">';
+            html += '<div class="query-header"><h4>' + (isCovered ? '✅ Covered' : '❌ Not Covered') + '</h4>';
+            if (queryResult.condition) {
+                html += '<p class="query-subtitle">' + queryResult.condition + '</p>';
+            }
+            html += '</div><div class="eligibility-content">';
+            
+            if (queryResult.reason) {
+                html += '<div class="eligibility-reason"><p>' + queryResult.reason + '</p></div>';
+            }
+            if (queryResult.requirements && queryResult.requirements.length > 0) {
+                html += '<div class="eligibility-requirements"><p><strong>Requirements:</strong></p><ul>';
+                queryResult.requirements.forEach(req => html += '<li>' + req + '</li>');
+                html += '</ul></div>';
+            }
+            if (queryResult.exclusions && queryResult.exclusions.length > 0) {
+                html += '<div class="eligibility-exclusions"><p><strong>Exclusions:</strong></p><ul>';
+                queryResult.exclusions.forEach(excl => html += '<li>' + excl + '</li>');
+                html += '</ul></div>';
+            }
+            if (queryResult.advice) {
+                html += '<div class="eligibility-advice"><p><strong>💡 Advice:</strong> ' + queryResult.advice + '</p></div>';
+            }
+            html += '</div></div>';
+            break;
+            
+        case 'scenario':
+            if (queryResult.coverage_steps && Array.isArray(queryResult.coverage_steps)) {
+                html = '<div class="query-result scenario-query">';
+                html += '<div class="query-header"><h4>🎯 Scenario Analysis</h4>';
+                if (queryResult.scenario) {
+                    html += '<p class="query-subtitle">' + queryResult.scenario + '</p>';
+                }
+                html += '</div><div class="scenario-content">';
+                
+                if (queryResult.coverage_status) {
+                    const statusClass = queryResult.coverage_status === 'full' ? 'full-coverage' : 
+                                      queryResult.coverage_status === 'partial' ? 'partial-coverage' : 'no-coverage';
+                    html += '<div class="coverage-status ' + statusClass + '">';
+                    html += '<span>Coverage Status: <strong>' + queryResult.coverage_status.toUpperCase() + '</strong></span></div>';
+                }
+                
+                html += '<div class="coverage-steps"><h5>Step-by-Step Coverage Analysis:</h5><ol>';
+                queryResult.coverage_steps.forEach(step => html += '<li>' + step + '</li>');
+                html += '</ol></div>';
+                
+                if (queryResult.claim_guidance) {
+                    html += '<div class="claim-guidance"><h5>📞 Claim Guidance:</h5><p>' + queryResult.claim_guidance + '</p></div>';
+                }
+                html += '</div></div>';
+            }
+            break;
+    }
+    
+    if (html) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+        messageDiv.innerHTML = '<div class="message-bubble"><div class="message-content">' + html + '</div></div>';
+        messagesContainer.appendChild(messageDiv);
+        requestAnimationFrame(() => {
+            scrollToBottom(true);
+        });
+    }
 }
 
 // Display Claims Intelligence
@@ -1178,122 +1324,6 @@ function toggleMobileMenu() {
     document.querySelector('.right-panel').classList.toggle('active');
 }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-// Mute Functions
-function toggleMute() {
-    isMuted = !isMuted;
-    localStorage.setItem('tripkaki_muted', isMuted);
-    updateMuteButton();
-    
-    // Stop any current speech if muting
-    if (isMuted && isSpeaking) {
-        if (ttsAudio) {
-            ttsAudio.pause();
-            ttsAudio.currentTime = 0;
-        }
-    }
-}
-
-function updateMuteButton() {
-    if (voiceMuteBtn && muteIcon) {
-        if (isMuted) {
-            muteIcon.textContent = '🔇';
-            voiceMuteBtn.classList.add('muted');
-            voiceMuteBtn.title = 'Click to unmute voice';
-        } else {
-            muteIcon.textContent = '🔊';
-            voiceMuteBtn.classList.remove('muted');
-            voiceMuteBtn.title = 'Click to mute voice';
-        }
-    }
-}
-
-// Voice Selection Functions
-function selectVoice(voiceType) {
-    // Update visual selection
-    document.querySelectorAll('.voice-option').forEach(option => {
-        option.classList.remove('active');
-        if (option.dataset.voice === voiceType) {
-            option.classList.add('active');
-        }
-    });
-    
-    // Update current voice display
-    const currentVoiceName = document.getElementById('currentVoiceName');
-    if (currentVoiceName) {
-        const voiceNames = {
-            'singaporean': 'Singaporean',
-            'professional': 'Professional',
-            'casual': 'Casual',
-            'energetic': 'Energetic'
-        };
-        currentVoiceName.textContent = voiceNames[voiceType] || 'Singaporean';
-    }
-    
-    // Save to localStorage
-    localStorage.setItem('tripkaki_voice', voiceType);
-    
-    // Show notification
-    showNotification(`Voice changed to ${voiceType}!`);
-}
-
-let currentRating = 0;
-
-function initVoiceRating() {
-    currentRating = 0;
-    document.querySelectorAll('.star').forEach(star => {
-        star.classList.remove('active');
-    });
-    const ratingValue = document.getElementById('ratingValue');
-    if (ratingValue) {
-        ratingValue.textContent = '';
-    }
-}
-
-function setRating(rating) {
-    currentRating = rating;
-    const stars = document.querySelectorAll('.star');
-    stars.forEach((star, index) => {
-        if (index < rating) {
-            star.classList.add('active');
-        } else {
-            star.classList.remove('active');
-        }
-    });
-    
-    const ratingValue = document.getElementById('ratingValue');
-    if (ratingValue) {
-        const ratings = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
-        ratingValue.textContent = `Your rating: ${ratings[rating] || ''}`;
-    }
-}
-
-function handleVoiceReview() {
-    const feedback = document.getElementById('voiceFeedback').value;
-    
-    if (currentRating === 0) {
-        alert('Please select a rating before submitting.');
-        return;
-    }
-    
-    // Show thank you message
-    showNotification(`Thank you for your ${currentRating}-star review!`);
-    
-    // Here you could send to backend
-    console.log('Voice review submitted:', {
-        rating: currentRating,
-        feedback: feedback
-    });
-    
-    // Close modal
-    document.getElementById('voiceReviewModalOverlay').style.display = 'none';
-    
-    // Clear form
-    initVoiceRating();
-    document.getElementById('voiceFeedback').value = '';
-}
-
 // Show initial travel insurance quick replies
 function showInitialQuickReplies() {
     const initialReplies = [
@@ -1324,10 +1354,6 @@ setTimeout(() => {
     }
 }, 1000);
 
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 // Initialize wallet balance
 updateWallet();
 

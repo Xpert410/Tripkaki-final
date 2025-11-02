@@ -1,0 +1,258 @@
+/* Query Result Styles for MICA Intelligent Query Classification System */
+
+.query-result {
+    margin: 16px 0;
+    padding: 20px;
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-md);
+}
+
+.query-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary);
+}
+
+.query-header h4 {
+    margin: 0 0 8px 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 18px;
+    color: var(--primary);
+}
+
+.query-subtitle {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Comparison Query Styles */
+.comparison-query {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(20, 184, 166, 0.05) 100%);
+}
+
+.comparison-matrix {
+    overflow-x: auto;
+    margin: 16px 0;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.comparison-table thead {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+}
+
+.comparison-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.comparison-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.comparison-table tbody tr:hover {
+    background: rgba(79, 70, 229, 0.05);
+}
+
+.benefit-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.query-summary {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 8px;
+}
+
+.query-recommendation {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(79, 70, 229, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+/* Explanation Query Styles */
+.explanation-query {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.05) 0%, rgba(79, 70, 229, 0.05) 100%);
+}
+
+.explanation-content {
+    line-height: 1.8;
+}
+
+.explanation-content p {
+    margin: 12px 0;
+}
+
+.reference-text {
+    margin-top: 16px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    font-style: italic;
+}
+
+.coverage-details {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+}
+
+.coverage-details p {
+    margin: 8px 0;
+}
+
+/* Eligibility Query Styles */
+.eligibility-query.eligible {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border-left: 4px solid var(--success);
+}
+
+.eligibility-query.not-eligible {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+    border-left: 4px solid var(--error);
+}
+
+.eligibility-content {
+    margin-top: 16px;
+}
+
+.eligibility-reason {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.eligibility-requirements,
+.eligibility-exclusions {
+    margin: 12px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+}
+
+.eligibility-requirements ul,
+.eligibility-exclusions ul {
+    margin: 8px 0 0 0;
+    padding-left: 24px;
+}
+
+.eligibility-advice {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(79, 70, 229, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+/* Scenario Query Styles */
+.scenario-query {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(239, 68, 68, 0.05) 100%);
+}
+
+.scenario-content {
+    margin-top: 16px;
+}
+
+.coverage-status {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.coverage-status.full-coverage {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+    border: 2px solid var(--success);
+}
+
+.coverage-status.partial-coverage {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+    border: 2px solid var(--warning);
+}
+
+.coverage-status.no-coverage {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error);
+    border: 2px solid var(--error);
+}
+
+.coverage-steps {
+    margin: 16px 0;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+}
+
+.coverage-steps h5 {
+    margin: 0 0 12px 0;
+    color: var(--primary);
+}
+
+.coverage-steps ol {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.coverage-steps li {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.applicable-benefits {
+    margin: 16px 0;
+    padding: 12px;
+    background: rgba(20, 184, 166, 0.1);
+    border-radius: 8px;
+}
+
+.applicable-benefits ul {
+    margin: 8px 0 0 0;
+    padding-left: 24px;
+}
+
+.scenario-details {
+    margin: 16px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+}
+
+.claim-guidance {
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(20, 184, 166, 0.1) 100%);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.claim-guidance h5 {
+    margin: 0 0 8px 0;
+    color: var(--primary);
+}
+
+.claim-guidance p {
+    margin: 0;
+    line-height: 1.6;
+}
+
