@@ -1454,6 +1454,10 @@ function showReceiptModal() {
     document.getElementById('receiptPeriod').textContent = currentPaymentData.duration;
     document.getElementById('receiptTransactionId').textContent = transactionId;
     document.getElementById('receiptEmail').textContent = billingEmail.value;
+    // Customer name
+    const customerName = cardholderName.value || 'Customer';
+    const rc = document.getElementById('receiptCustomerName');
+    if (rc) rc.textContent = customerName;
     
     // Update card details (last 4 digits) from Stripe result
     document.getElementById('receiptCardLast4').textContent = last4FromPayment || '0000';
@@ -1595,6 +1599,25 @@ async function handlePayment() {
         // If backend returned policy info, show it in chat
         if (finalizeData.status === 'paid') {
             addMessage('🎉 Payment successful! Your travel insurance policy is now active. You can download your e-receipt below.', 'assistant');
+            // Also add a clear paid status message to the chat
+            addMessage(`Payment status: PAID${finalizeData.policy_number ? ' — Policy: ' + finalizeData.policy_number : ''}`, 'assistant');
+            // Hide any action buttons and disable other payment triggers
+            try {
+                hideActionButtons();
+                if (paymentButton) paymentButton.style.display = 'none';
+                const triggers = document.querySelectorAll('.payment-trigger-btn');
+                triggers.forEach(btn => {
+                    try {
+                        btn.disabled = true;
+                        btn.innerHTML = '✅ PAID — Download Receipt';
+                        btn.style.opacity = '0.85';
+                        btn.style.cursor = 'pointer';
+                        btn.onclick = () => showReceiptModal();
+                    } catch (e) { /* ignore individual button errors */ }
+                });
+            } catch (e) {
+                console.warn('Error cleaning up payment buttons after success', e);
+            }
             // Update currentPaymentData from server response if available
             if (finalizeData.policy_number) {
                 currentPaymentData.policy_number = finalizeData.policy_number;
@@ -1711,39 +1734,51 @@ function downloadReceiptPDF() {
         
         // Payment Summary Box
         yPos += 20;
-        doc.setFillColor(248, 250, 255);
-        doc.setDrawColor(...primaryColor);
-        doc.roundedRect(20, yPos - 5, 170, 35, 3, 3, 'FD');
+    // Payment summary box (larger to contain all lines)
+    doc.setFillColor(248, 250, 255);
+    doc.setDrawColor(...primaryColor);
+    const boxX = 20;
+    const boxY = yPos - 5;
+    const boxW = 170;
+    const boxH = 60; // taller box to ensure all lines fit
+    doc.roundedRect(boxX, boxY, boxW, boxH, 3, 3, 'FD');
+
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment Summary', boxX + 5, boxY + 12);
+
+    doc.setTextColor(...textColor);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    // Lines inside the box
+    const lineStartX = boxX + 5;
+    let lineY = boxY + 22;
+    doc.text('Insurance Premium:', lineStartX, lineY);
+    doc.text('SGD $79.00', boxX + boxW - 10, lineY, { align: 'right' });
+
+    lineY += 8;
+    doc.text('Service Fee:', lineStartX, lineY);
+    doc.text('SGD $5.00', boxX + boxW - 10, lineY, { align: 'right' });
+
+    lineY += 8;
+    doc.text('GST (8%):', lineStartX, lineY);
+    doc.text('SGD $5.00', boxX + boxW - 10, lineY, { align: 'right' });
+
+    // Total amount inside the box (clearer)
+    lineY += 12;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('TOTAL PAID:', lineStartX, lineY);
+    doc.text('SGD $89.00', boxX + boxW - 10, lineY, { align: 'right' });
         
-        doc.setTextColor(...primaryColor);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Payment Summary', 25, yPos + 5);
-        
-        doc.setTextColor(...textColor);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Insurance Premium:', 25, yPos + 12);
-        doc.text('SGD $79.00', 160, yPos + 12, { align: 'right' });
-        
-        doc.text('Service Fee:', 25, yPos + 18);
-        doc.text('SGD $5.00', 160, yPos + 18, { align: 'right' });
-        
-        doc.text('GST (8%):', 25, yPos + 24);
-        doc.text('SGD $5.00', 160, yPos + 24, { align: 'right' });
-        
-        // Total amount
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text('TOTAL PAID:', 25, yPos + 32);
-        doc.text('SGD $89.00', 160, yPos + 32, { align: 'right' });
-        
-        // Important Information
-        yPos += 50;
-        doc.setTextColor(...primaryColor);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Important Information', 20, yPos);
+    // Important Information — place this block outside (below) the payment summary box
+    // Ensure it's rendered below the box we just drew
+    yPos = boxY + boxH + 15; // position below the payment summary box with padding
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Important Information', 20, yPos);
         
         yPos += 8;
         doc.setTextColor(...textColor);
