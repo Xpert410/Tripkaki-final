@@ -6,13 +6,13 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { GroqService } from './groqService.js';
 import { ConversationManager } from './conversationManager.js';
-import { TaxonomyEngine } from './services/taxonomyEngine.js';
-import { DocumentProcessor } from './services/documentProcessor.js';
-import { MCPTools } from './services/mcpTools.js';
-import { ClaimsIntelligence } from './services/claimsIntelligence.js';
-import { GroqIntelligence } from './services/groqIntelligence.js';
-import { PolicyDatabase } from './services/policyDatabase.js';
-import notificationsRouter from './routes/notifications.js';
+// import { TaxonomyEngine } from './services/taxonomyEngine.js';
+// import { DocumentProcessor } from './services/documentProcessor.js';
+// import { MCPTools } from './services/mcpTools.js';
+// import { ClaimsIntelligence } from './services/claimsIntelligence.js';
+// import { GroqIntelligence } from './services/groqIntelligence.js';
+// import { PolicyDatabase } from './services/policyDatabase.js';
+// import notificationsRouter from './routes/notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,12 +30,12 @@ app.use(express.static(join(__dirname, '../frontend')));
 // Initialize services
 const groqService = new GroqService();
 const conversationManager = new ConversationManager();
-const taxonomyEngine = new TaxonomyEngine();
-const documentProcessor = new DocumentProcessor();
-const mcpTools = new MCPTools();
-const claimsIntelligence = new ClaimsIntelligence();
-const groqIntelligence = new GroqIntelligence();
-const policyDatabase = new PolicyDatabase();
+// const taxonomyEngine = new TaxonomyEngine();
+// const documentProcessor = new DocumentProcessor();
+// const mcpTools = new MCPTools();
+// const claimsIntelligence = new ClaimsIntelligence();
+// const groqIntelligence = new GroqIntelligence();
+// const policyDatabase = new PolicyDatabase();
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -44,7 +44,7 @@ const upload = multer({
 });
 
 // API Routes
-app.use('/api/notifications', notificationsRouter);
+// app.use('/api/notifications', notificationsRouter);
 
 // Keep API root endpoint
 app.get('/api', (req, res) => {
@@ -60,14 +60,19 @@ app.post('/api/chat', async (req, res) => {
     const sessionId = session_id || randomUUID();
     conversationManager.getOrCreateSession(sessionId);
     
-    // Process message through conversation flow
-    const result = await conversationManager.processMessage(
-      sessionId,
-      message,
-      groqService,
-      policyDatabase,
-      claimsIntelligence
-    );
+    // Simple response for now - no database dependency
+    const responses = [
+      "Great! I can help you with travel insurance for Japan. What are your travel dates?",
+      "Perfect! Let me find the best travel insurance options for your trip.",
+      "I'd be happy to assist with travel insurance. What type of coverage do you need?",
+      "Thanks for choosing TripKaki! How can I help with your travel insurance today?"
+    ];
+    
+    const result = {
+      message: responses[Math.floor(Math.random() * responses.length)],
+      conversationId: sessionId,
+      timestamp: new Date().toISOString()
+    };
     
     res.json(result);
   } catch (error) {
@@ -201,7 +206,8 @@ app.post('/api/process-policies', async (req, res) => {
 
     try {
       console.log('[API] Starting processAllPolicyFiles...');
-      const results = await policyDatabase.processAllPolicyFiles(progressCallback);
+      // const results = await policyDatabase.processAllPolicyFiles(progressCallback);
+      const results = { message: "Database processing disabled for now" };
       console.log('[API] processAllPolicyFiles completed:', results);
       
       // Check if processing was successful
@@ -259,7 +265,8 @@ app.post('/api/process-policies', async (req, res) => {
 // Get combined taxonomy
 app.get('/api/taxonomy', (req, res) => {
   try {
-    const taxonomy = policyDatabase.getCombinedTaxonomy();
+    // const taxonomy = policyDatabase.getCombinedTaxonomy();
+    const taxonomy = { message: "Taxonomy service temporarily disabled" };
     
     if (!taxonomy) {
       return res.status(404).json({ 
@@ -288,7 +295,8 @@ app.get('/api/taxonomy', (req, res) => {
 app.get('/api/policy/:productKey', (req, res) => {
   try {
     const { productKey } = req.params;
-    const productData = policyDatabase.getPolicyData(productKey);
+    // const productData = policyDatabase.getPolicyData(productKey);
+    const productData = { message: "Policy data service temporarily disabled" };
     
     if (!productData) {
       return res.status(404).json({ 
@@ -314,7 +322,8 @@ app.post('/api/compare-policies', (req, res) => {
     const { product_keys } = req.body;
     const productKeys = product_keys || ['Product A', 'Product B', 'Product C'];
     
-    const comparison = policyDatabase.generateComparisonMatrix(productKeys);
+    // const comparison = policyDatabase.generateComparisonMatrix(productKeys);
+    const comparison = { message: "Comparison service temporarily disabled" };
     
     res.json({
       success: true,
@@ -532,7 +541,8 @@ app.get('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`TripKaki server running on http://localhost:${PORT}`);
-  console.log(`Frontend available at http://localhost:${PORT}`);
+    console.log(`TripKaki server running on http://localhost:${PORT}`);
+    console.log(`Frontend available at http://localhost:${PORT}`);
+}).on('error', (err) => {
+    console.error('Server error:', err);
 });
-
