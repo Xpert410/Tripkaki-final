@@ -338,6 +338,22 @@
         </div>
     </div>
 
+    <script src="policyReceiptIntegration.js"></script>
     <script src="app.js"></script>
+    
+    <script>
+        // Initialize receipt monitoring when user starts chatting
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up user ID for receipt monitoring
+            // In production, get this from your authentication system
+            const userId = localStorage.getItem('lea_user_id') || 'user_' + Date.now();
+            localStorage.setItem('lea_user_id', userId);
+            
+            // Start monitoring for policy receipts
+            window.policyReceiptManager.startMonitoring(userId);
+            
+            console.log('Policy receipt monitoring started for user:', userId);
+        });
+    </script>
 </body>
 </html>

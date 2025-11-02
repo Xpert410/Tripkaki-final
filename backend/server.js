@@ -12,6 +12,7 @@ import { MCPTools } from './services/mcpTools.js';
 import { ClaimsIntelligence } from './services/claimsIntelligence.js';
 import { GroqIntelligence } from './services/groqIntelligence.js';
 import { PolicyDatabase } from './services/policyDatabase.js';
+import notificationsRouter from './routes/notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,6 +44,8 @@ const upload = multer({
 });
 
 // API Routes
+app.use('/api/notifications', notificationsRouter);
+
 // Keep API root endpoint
 app.get('/api', (req, res) => {
   res.json({ message: 'TripKaki Travel Insurance Concierge API' });
