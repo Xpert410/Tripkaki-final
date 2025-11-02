@@ -1608,11 +1608,26 @@ async function handlePayment() {
                 const triggers = document.querySelectorAll('.payment-trigger-btn');
                 triggers.forEach(btn => {
                     try {
-                        btn.disabled = true;
+                        btn.disabled = false;
                         btn.innerHTML = '✅ PAID — Download Receipt';
-                        btn.style.opacity = '0.85';
+                        btn.style.opacity = '0.95';
                         btn.style.cursor = 'pointer';
-                        btn.onclick = () => showReceiptModal();
+                        // When clicked, open receipt modal and trigger immediate download
+                        btn.onclick = () => {
+                            try {
+                                showReceiptModal();
+                                // Allow modal to render and fields to populate, then download
+                                setTimeout(() => {
+                                    try {
+                                        downloadReceiptPDF();
+                                    } catch (err) {
+                                        console.error('Auto-download failed:', err);
+                                    }
+                                }, 350);
+                            } catch (e) {
+                                console.error('Error opening receipt modal from chat button', e);
+                            }
+                        };
                     } catch (e) { /* ignore individual button errors */ }
                 });
             } catch (e) {
