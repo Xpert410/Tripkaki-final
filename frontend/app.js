@@ -38,15 +38,12 @@ const avatarCustomizeBtn = document.getElementById('avatarCustomizeBtn');
 const avatarModalOverlay = document.getElementById('avatarModalOverlay');
 const closeAvatarModal = document.getElementById('closeAvatarModal');
 const cancelAvatarModal = document.getElementById('cancelAvatarModal');
-const voiceMuteBtn = document.getElementById('voiceMuteBtn');
-const muteIcon = document.getElementById('muteIcon');
 
 // Speech Recognition State
 let recognition = null;
 let isListening = false;
 let isSpeaking = false;
 let lipSyncInterval = null;
-let isMuted = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -114,85 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedEmoji = localStorage.getItem('tripkaki_avatar_emoji') || '🤖';
     changeAvatarEmoji(savedEmoji);
     
-    // Voice Selection handlers
-    const voiceSelectBtn = document.getElementById('voiceSelectBtn');
-    const voiceModalOverlay = document.getElementById('voiceModalOverlay');
-    const closeVoiceModal = document.getElementById('closeVoiceModal');
-    const cancelVoiceModal = document.getElementById('cancelVoiceModal');
-    
-    if (voiceSelectBtn) {
-        voiceSelectBtn.addEventListener('click', () => {
-            voiceModalOverlay.style.display = 'flex';
-        });
-    }
-    if (closeVoiceModal) {
-        closeVoiceModal.addEventListener('click', () => {
-            voiceModalOverlay.style.display = 'none';
-        });
-    }
-    if (cancelVoiceModal) {
-        cancelVoiceModal.addEventListener('click', () => {
-            voiceModalOverlay.style.display = 'none';
-        });
-    }
-    
-    // Voice option selection
-    document.querySelectorAll('.voice-option').forEach(option => {
-        option.addEventListener('click', () => {
-            const voiceType = option.dataset.voice;
-            selectVoice(voiceType);
-            voiceModalOverlay.style.display = 'none';
-        });
-    });
-    
-    // Load saved voice
-    const savedVoice = localStorage.getItem('tripkaki_voice') || 'singaporean';
-    selectVoice(savedVoice);
-    
-    // Voice Review handlers
-    const voiceReviewBtn = document.getElementById('voiceReviewBtn');
-    const voiceReviewModalOverlay = document.getElementById('voiceReviewModalOverlay');
-    const closeVoiceReviewModal = document.getElementById('closeVoiceReviewModal');
-    const cancelVoiceReviewModal = document.getElementById('cancelVoiceReviewModal');
-    const submitVoiceReview = document.getElementById('submitVoiceReview');
-    
-    if (voiceReviewBtn) {
-        voiceReviewBtn.addEventListener('click', () => {
-            voiceReviewModalOverlay.style.display = 'flex';
-            initVoiceRating();
-        });
-    }
-    if (closeVoiceReviewModal) {
-        closeVoiceReviewModal.addEventListener('click', () => {
-            voiceReviewModalOverlay.style.display = 'none';
-        });
-    }
-    if (cancelVoiceReviewModal) {
-        cancelVoiceReviewModal.addEventListener('click', () => {
-            voiceReviewModalOverlay.style.display = 'none';
-        });
-    }
-    if (submitVoiceReview) {
-        submitVoiceReview.addEventListener('click', handleVoiceReview);
-    }
-    
-    // Star rating
-    const stars = document.querySelectorAll('.star');
-    stars.forEach(star => {
-        star.addEventListener('click', () => {
-            const rating = parseInt(star.dataset.rating);
-            setRating(rating);
-        });
-    });
-    
-    // Mute button
-    if (voiceMuteBtn) {
-        voiceMuteBtn.addEventListener('click', toggleMute);
-    }
-    
-    // Load saved mute state
-    isMuted = localStorage.getItem('tripkaki_muted') === 'true';
-    updateMuteButton();
+    // Update wallet display
+    updateWallet();
 });
 
 // Handle Block Clicks
@@ -808,10 +728,6 @@ async function handleFileUpload(event) {
 
     const formData = new FormData();
     formData.append('document', file);
-    // Include session ID if available
-    if (sessionId) {
-        formData.append('session_id', sessionId);
-    }
 
     try {
         const response = await fetch(`${API_BASE}/api/upload-document`, {
@@ -821,24 +737,27 @@ async function handleFileUpload(event) {
 
         const data = await response.json();
 
-        // Store session ID if returned
-        if (data.session_id && !sessionId) {
-            sessionId = data.session_id;
-        }
-
         if (data.success) {
             const profile = data.travel_profile;
             const quotation = data.quotation;
             
-            // Display summary message from backend (already handles one-by-one prompts)
             addMessage(
-                data.summary_message || 
                 `✅ Document processed! I found:\n` +
                 `📍 Destination: ${profile.destination?.country || 'N/A'}\n` +
                 `📅 Dates: ${profile.trip_dates?.start} to ${profile.trip_dates?.end}\n` +
-                `👥 Travellers: ${profile.travellers?.length || 0}\n`,
+                `👥 Travellers: ${profile.travellers?.length || 0}\n` +
+                `💰 Instant quote generated!`,
                 'assistant'
             );
+
+            if (quotation && quotation.plans) {
+                displayQuotation(quotation);
+            }
+
+            if (data.claims_intelligence) {
+                displayClaimsIntelligence(data.claims_intelligence, data.tier_recommendation);
+                updateStatsPanel(data.claims_intelligence);
+            }
             
             // Earn rewards for uploading
             earnRewards(25);
@@ -1021,11 +940,6 @@ function changeAvatarEmoji(emoji) {
 // Text-to-Speech with Lip Sync
 function speakText(text) {
     if (!text) return;
-    
-    // Check if muted
-    if (isMuted) {
-        return;
-    }
     
     // Use browser TTS
     if ('speechSynthesis' in window) {
@@ -1264,6 +1178,7 @@ function toggleMobileMenu() {
     document.querySelector('.right-panel').classList.toggle('active');
 }
 
+<<<<<<< Updated upstream
 // Mute Functions
 function toggleMute() {
     isMuted = !isMuted;
@@ -1408,6 +1323,8 @@ setTimeout(() => {
     }
 }, 1000);
 
+=======
+>>>>>>> Stashed changes
 // Initialize wallet balance
 updateWallet();
 

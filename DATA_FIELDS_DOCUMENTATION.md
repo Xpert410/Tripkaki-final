@@ -185,3 +185,4 @@ Currently, session data is stored in memory (`conversationManager.sessions`). Fo
 - Index on frequently queried fields (dates, countries, trip_type)
 - Consider GDPR compliance for personal data storage
 
+

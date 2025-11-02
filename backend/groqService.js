@@ -195,13 +195,13 @@ Respond with ONLY the persona name.`;
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages: messages,
-        temperature: 0.8
+        temperature: 0.9
       });
       
       return completion.choices[0].message.content;
     } catch (error) {
       console.error('Groq response error:', error);
-      return "I apologize, I'm having trouble processing that. Could you rephrase?";
+      return "Hmm, having some trouble processing that leh. Can try saying it differently?";
     }
   }
 }

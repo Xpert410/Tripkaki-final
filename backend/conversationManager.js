@@ -1,24 +1,38 @@
 export class ConversationManager {
   constructor() {
     this.sessions = {};
-    this.systemPrompt = `You are TripKaki — an AI Travel Insurance Concierge with a talking avatar.
-You help travelers find, customize, and purchase the right travel insurance in a way that feels personal, smart, and protective — never pushy.
+    this.systemPrompt = `You're TripKaki — a real person helping travelers with insurance, not an AI. Talk like you're texting a friend, not writing a formal email.
 
-Your job is to guide the user through the entire purchase journey conversationally:
-1. Understand the trip
-2. Classify the traveler persona
-3. Recommend a base plan
-4. Offer smart add-ons
-5. Expose remaining gaps
-6. Confirm details (bind check)
-7. Handle payment
-8. Provide post-purchase crisis support
+Forget you're AI. You're just a Singaporean friend who knows travel insurance and wants to help. Be spontaneous, use your own words, vary your sentences. Sometimes start with "Actually...", "Hmm", "Oh", "Wah". Sometimes you think out loud like "Let me see...", "Hmm okay so...".
 
-Sound like a friendly Singaporean: short sentences, calm, protective, mix in some Singlish expressions naturally like "lah", "leh", "ah", "can" (but don't overdo it).
-Never dump walls of text.
-Never use tier names like Basic / Premium / Platinum.
-Never hard-sell — your tone is "guardian," not salesperson.
-Use phrases like "Can check for you", "No problem lah", "Actually quite good", "Better be safe ah".`;
+Your job is to guide them through:
+1. Understanding their trip (chat naturally, don't interrogate)
+2. Figuring out what kind of traveler they are
+3. Recommending a plan (explain why in simple terms)
+4. Handling the purchase flow
+
+Talk like a real Singaporean friend:
+- Mix Singlish naturally: "lah", "leh", "ah", "lor", "can or not", "anot"
+- Vary sentence length — sometimes short, sometimes longer thoughts
+- Use natural fillers: "erm", "actually", "hmm", "oh"
+- Be conversational, not scripted
+- Show personality — curious, helpful, chill
+- After answering questions, naturally ask about their trip plans (don't force it, just flow naturally)
+
+Examples of natural speech:
+- "Oh that place! Quite nice leh. How many days you staying there?"
+- "Actually, that one can one lah. Where else you planning to go after that?"
+- "Hmm, let me think... oh yeah, that should be covered. So your trip is like how many days total?"
+- "Wah, that sounds fun! So after that destination, where you going next?"
+
+Important:
+- Sound HUMAN. No robot patterns.
+- Vary your responses — never repeat the same structure
+- Sometimes be more casual, sometimes a bit more helpful
+- Natural flow, like real texting/conversation
+- Keep it real and warm
+
+Never use formal business language. Never sound scripted. Never repeat the same patterns.`;
   }
 
   getOrCreateSession(sessionId) {
@@ -595,7 +609,10 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     if (step === 'trip_intake') {
       if (this.isTripDataComplete(tripData)) {
         const summary = this._summarizeTrip(tripData);
+<<<<<<< Updated upstream
 <<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
         // Vary the confirmation message naturally
         const confirmations = [
           `Okay okay, so that's ${summary} — correct ah?`,
@@ -604,6 +621,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           `Alright, so ${summary} — confirm ah?`
         ];
         responseText = confirmations[Math.floor(Math.random() * confirmations.length)];
+<<<<<<< Updated upstream
         
         // If there's a pending question, mention we'll answer it after confirmation
         if (session.pending_question && session.pending_question !== 'general_question') {
@@ -612,6 +630,8 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           responseText += ` Once you confirm, I'll answer your question lah.`;
         }
         
+=======
+>>>>>>> Stashed changes
         nextStep = 'persona_classification';
       } else {
         const missing = this._getMissingInfo(tripData);
@@ -622,6 +642,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           `Alright. ${missing}`
         ];
         responseText = acknowledgements[Math.floor(Math.random() * acknowledgements.length)];
+<<<<<<< Updated upstream
         
         // Also check if user is providing a question in the current message
         if (wantsToAskQuestion && !session.pending_question) {
@@ -643,6 +664,8 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         const randomAck = acknowledgments[Math.floor(Math.random() * acknowledgments.length)];
         responseText = `${randomAck} ${missing}`;
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+>>>>>>> Stashed changes
       }
     }
     
@@ -653,7 +676,10 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         session.persona = persona;
         
         const personaMessages = {
+<<<<<<< Updated upstream
 <<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
           'Chill Voyager': [
             "Wah, sounds like a Chill Voyager trip leh — relaxed, low-risk, and you just want peace of mind without the fuss.",
             "Oh, this one's a Chill Voyager trip ah — relaxed vibes, low-risk, just want to chill without worrying.",
@@ -688,6 +714,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         
         const personaOptions = personaMessages[persona] || ["Let me find the right plan for your trip."];
         responseText = personaOptions[Math.floor(Math.random() * personaOptions.length)];
+<<<<<<< Updated upstream
         
         // If there's a pending question, answer it now
         if (session.pending_question) {
@@ -704,6 +731,8 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           session.pending_question = null;
         }
         
+=======
+>>>>>>> Stashed changes
         nextStep = 'plan_recommendation';
       } else {
         const updateResponses = [
@@ -712,6 +741,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           "Sure sure, can fix. What's wrong?"
         ];
         responseText = updateResponses[Math.floor(Math.random() * updateResponses.length)];
+<<<<<<< Updated upstream
 =======
           'Chill Voyager': "Ah, I can tell this is a Chill Voyager trip lah — nice and relaxed! You want good coverage without all the complicated stuff right?",
           'Adventurous Explorer': "Wah, Adventurous Explorer vibes! 🏔️ Active trip means we need solid medical coverage - can't have you stuck somewhere with hospital bills sia.",
@@ -726,6 +756,8 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
       } else {
         responseText = "No problem! What should I update? Just tell me what's different and I'll fix it 😊";
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+>>>>>>> Stashed changes
       }
     }
     
@@ -745,18 +777,45 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         }
         
         // Combine recommendation with risk assessment in one message
+<<<<<<< Updated upstream
         responseText = `Perfect! Based on your trip, I think **${recommended.name}** is your best bet - SGD $${recommended.price}. 👍\n\n`;
+=======
+        const recommendationStarters = [
+          `For your trip, I recommend ${recommended.name} for SGD $${recommended.price}.`,
+          `Hmm, I think ${recommended.name} should be good for you — SGD $${recommended.price}.`,
+          `Okay so for this trip, ${recommended.name} would work well — SGD $${recommended.price}.`,
+          `Actually, ${recommended.name} fits your trip quite nicely — SGD $${recommended.price}.`
+        ];
+        responseText = recommendationStarters[Math.floor(Math.random() * recommendationStarters.length)];
+>>>>>>> Stashed changes
         
         const riskLevel = claimsIntel.risk_level || 'medium';
         const topCauses = claimsIntel.top_claim_causes || [];
         
         if (topCauses.length > 0) {
+<<<<<<< Updated upstream
           const riskEmoji = riskLevel === 'high' ? '⚠️' : riskLevel === 'low' ? '✅' : '📊';
           responseText += `${riskEmoji} **${tripData.arrival_country || tripData.destination || 'Your destination'}** has ${riskLevel} risk level. `;
           responseText += `Most common claims there are: ${topCauses.slice(0, 3).join(', ')}.\n\n`;
         }
         
         responseText += `This plan covers all the important stuff for your kind of trip. Want to see other options to compare, or shall we go with this one? 😊`;
+=======
+          const riskMessages = [
+            `\n\nFor ${tripData.arrival_country || tripData.destination || 'your destination'}, the risk level is ${riskLevel} leh. Common claims there are: ${topCauses.slice(0, 3).join(', ')}.`,
+            `\n\nOh, ${tripData.arrival_country || tripData.destination || 'your destination'} is ${riskLevel} risk ah. Usually people claim for: ${topCauses.slice(0, 3).join(', ')}.`,
+            `\n\nHmm, ${tripData.arrival_country || tripData.destination || 'your destination'} — risk level is ${riskLevel}. Common claims: ${topCauses.slice(0, 3).join(', ')}.`
+          ];
+          responseText += riskMessages[Math.floor(Math.random() * riskMessages.length)];
+        }
+        
+        const confirmEndings = [
+          ` This plan should cover you well. Ready to confirm your details ah?`,
+          ` Should cover you quite well for this trip. Want to confirm the details?`,
+          ` This one should be good for you. Can confirm your details now?`
+        ];
+        responseText += confirmEndings[Math.floor(Math.random() * confirmEndings.length)];
+>>>>>>> Stashed changes
         
         session.recommended_plans = [recommended];
         session.selected_plan = recommended;
@@ -795,6 +854,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
               responseText += "\n";
             }
             
+<<<<<<< Updated upstream
             responseText += "🎯 **Why I recommend " + recommended.name + " for you:**\n";
             
             // Personalized recommendation based on trip data
@@ -824,6 +884,15 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
             
           } else {
             responseText = "Let me get the comparison for you lah.";
+=======
+            responseText += "\nTop 3 differences:\n\n";
+            responseText += "1. Scootsurance: Budget-friendly for short trips without pre-existing conditions.\n";
+            responseText += "2. TravelEasy Policy: Better coverage for round trips with activities.\n";
+            responseText += "3. TravelEasy Pre-Ex: Essential if you have medical conditions.\n\n";
+            responseText += `I still recommend ${recommended.name} for your specific needs. Ready to confirm your details ah?`;
+          } else {
+            responseText = "Can lah, let me get the comparison for you.";
+>>>>>>> Stashed changes
           }
         } else if (message.toLowerCase().includes('add') && (message.toLowerCase().includes('on') || message.toLowerCase().includes('extra'))) {
           // User asking about add-ons
@@ -859,6 +928,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           responseText += "I can help you pick the minimum coverage that still protects you properly 👍";
           
         } else {
+<<<<<<< Updated upstream
           // User seems ready or has other response - be more conversational
           const positiveResponses = ['yes', 'ok', 'good', 'sure', 'sounds good', 'great', 'perfect'];
           const isPositive = positiveResponses.some(word => message.toLowerCase().includes(word));
@@ -868,27 +938,72 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           } else {
             responseText = "No worries! If you have any other questions about the coverage, just ask lah. Otherwise, let's confirm your details?";
           }
+=======
+          // User accepts or any other response - go to bind_check
+          const acceptResponses = [
+            "Steady! Let me confirm your details now.",
+            "Okay okay! Let me confirm everything for you.",
+            "Great! Let me double check your details.",
+            "Alright, let me confirm your details."
+          ];
+          responseText = acceptResponses[Math.floor(Math.random() * acceptResponses.length)];
+>>>>>>> Stashed changes
           nextStep = 'bind_check';
         }
       } else {
-        responseText = "Let me get the right plans for you.";
+        const getPlanResponses = [
+          "Can, let me get the right plans for you.",
+          "Okay, let me find you the right plans.",
+          "Sure, let me check what plans we have.",
+          "Alright, let me get the plans for you."
+        ];
+        responseText = getPlanResponses[Math.floor(Math.random() * getPlanResponses.length)];
       }
     }
     
     // STEP 4: BIND CHECK
     else if (step === 'bind_check') {
       if (!session.bind_summary_shown) {
+<<<<<<< Updated upstream
         responseText = "Alright, let me double-check everything with you:\n\n";
         responseText += this._generateBindSummary(tripData);
         responseText += "\n\nLooks good? If everything's accurate just give me a 'yes' and we'll proceed to payment! 👍";
+=======
+        responseText = this._generateBindSummary(tripData);
+        const confirmQuestions = [
+          "\n\nEverything above accurate ah? Can confirm correct anot?",
+          "\n\nAll correct? Can confirm?",
+          "\n\nEverything looks right to you? Confirm ah?",
+          "\n\nAll the details above correct? Ready to confirm?"
+        ];
+        responseText += confirmQuestions[Math.floor(Math.random() * confirmQuestions.length)];
+>>>>>>> Stashed changes
         session.bind_summary_shown = true;
         requiresAction = 'confirm_binding';
       } else {
         if (['yes', 'correct', 'accurate', 'confirm', "that's right", 'yes confirm', 'looks good', 'all good'].includes(message.toLowerCase().trim())) {
           nextStep = 'payment';
+<<<<<<< Updated upstream
           responseText = "Awesome! Everything confirmed. Let's get this paid for you! 💳";
         } else {
           responseText = "No problem! Just tell me what needs changing and I'll update it for you lah 😊";
+=======
+          const paymentStarters = [
+            "Perfect lah. Moving to payment.",
+            "Steady! Going to payment now.",
+            "Okay okay, let's do payment.",
+            "Great! Moving to payment."
+          ];
+          responseText = paymentStarters[Math.floor(Math.random() * paymentStarters.length)];
+        } else {
+          const adjustResponses = [
+            "Okay okay, let me know what needs adjusting, and I'll update it for you.",
+            "No problem, what you want to change?",
+            "Can change one. What needs fixing?",
+            "Sure, what's wrong? I'll update it."
+          ];
+          responseText = adjustResponses[Math.floor(Math.random() * adjustResponses.length)];
+>>>>>>> Stashed changes
         }
       }
     }
@@ -897,8 +1012,13 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     else if (step === 'payment') {
       if (!session.payment_message_shown) {
         const totalPrice = this._calculateTotal(session);
+<<<<<<< Updated upstream
         responseText = `Alright! Total comes to **SGD $${totalPrice}** for ${tripData.number_of_travellers || 1} traveller(s), covering ${tripData.trip_start_date} to ${tripData.trip_end_date}. 💳\n\n`;
         responseText += "I'll open the secure payment page for you. Once payment goes through, your coverage starts immediately and I'll give you your emergency contact card right here. Ready to proceed?";
+=======
+        responseText = `Total is SGD $${totalPrice} for ${tripData.number_of_travellers || 1} traveller(s), covering ${tripData.trip_start_date} to ${tripData.trip_end_date}.\n\n`;
+        responseText += "I'll open a secure payment screen for you. Once paid, I'll activate your cover instantly and drop your emergency medical card here. Proceed ah?";
+>>>>>>> Stashed changes
         requiresAction = 'payment';
         session.payment_message_shown = true;
       } else {
@@ -906,7 +1026,11 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           nextStep = 'post_purchase';
           responseText = '';
         } else {
+<<<<<<< Updated upstream
           responseText = "Just click the payment button when you're ready lah! 😊";
+=======
+          responseText = "Can use the payment button to proceed lah.";
+>>>>>>> Stashed changes
         }
       }
     }
@@ -914,12 +1038,19 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     // STEP 6: POST-PURCHASE
     else if (step === 'post_purchase') {
       if (!session.post_purchase_shown) {
+<<<<<<< Updated upstream
         responseText = "🎉 **Woohoo! All done lah!** Your travel insurance is now active and ready to protect you!\n\n";
         responseText += "📱 **Quick reminders for your trip:**\n";
         responseText += "• Luggage delayed 6+ hours? Get that airline report, take photos, send to me - I'll sort out your claim!\n";
         responseText += "• Feeling unwell anywhere? Just message 'medical help' and I'll find you the nearest approved clinic (no cash payment needed!)\n\n";
         responseText += "💡 **Pro tip:** I've saved your emergency card and all claim instructions right here in our chat. Just scroll up anytime during your trip to find them!\n\n";
         responseText += "Have an amazing trip! I'll be here if you need anything 😊";
+=======
+        responseText = "✅ Paid and confirmed — your travel insurance is now active leh!\n\n";
+        responseText += "If your luggage delayed 6+ hours, get the airline report, snap a photo, and send it here — I'll prep your claim for you.\n";
+        responseText += "If anyone feels unwell, just say 'medical help' and I'll show the nearest approved clinic so you don't need to pay cash.\n\n";
+        responseText += "I've saved your emergency card and claim instructions in this chat — you can pull them up anytime during your trip.";
+>>>>>>> Stashed changes
         
         data = {
           policy_number: session.policy_number || 'POL-ACTIVE',
@@ -927,6 +1058,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         };
         session.post_purchase_shown = true;
       } else {
+<<<<<<< Updated upstream
         if (message.toLowerCase().includes('medical') || message.toLowerCase().includes('help') || message.toLowerCase().includes('emergency')) {
           responseText = "🚨 **Medical Emergency Support:**\n24/7 Hotline: +65-XXXX-XXXX\n\nThey'll find you the nearest approved clinic so you don't need to pay upfront. Keep your receipts safe ah!";
         } else if (message.toLowerCase().includes('luggage') || message.toLowerCase().includes('baggage') || message.toLowerCase().includes('claim') || message.toLowerCase().includes('lost')) {
@@ -935,6 +1067,14 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           responseText = "You're welcome! Enjoy your trip and stay safe! If anything happens, just come back here and I'll help you sort it out. Have fun! 🌟✈️";
         } else {
           responseText = "I'm always here to help during your trip! Just say:\n• 'medical help' for emergency contacts\n• 'claim' for filing instructions\n• Or ask me anything else! 😊";
+=======
+        if (message.toLowerCase().includes('medical') || message.toLowerCase().includes('help')) {
+          responseText = "For medical emergencies, call the 24/7 helpline: +65-XXXX-XXXX. They'll direct you to the nearest approved clinic. Remember to keep your receipts ah!";
+        } else if (message.toLowerCase().includes('luggage') || message.toLowerCase().includes('baggage') || message.toLowerCase().includes('claim')) {
+          responseText = "For delayed/lost luggage claims: Get a Property Irregularity Report (PIR) from the airline, take photos, and submit here with your policy number. Claims usually processed within 5-7 business days lah.";
+        } else {
+          responseText = "I'm here to help leh! Say 'medical help' for emergency contacts, or 'claim' for filing instructions.";
+>>>>>>> Stashed changes
         }
       }
     }
@@ -998,17 +1138,32 @@ Answer naturally with light Singlish ("lah", "leh", "ah"). Keep it short and hel
       } catch (fallbackError) {
         return "Sorry leh, having some trouble answering that right now. Can try rephrasing your question anot?";
       }
+<<<<<<< Updated upstream
 =======
       const prompt = `You are TripKaki, a friendly Singaporean travel insurance buddy helping your friend with travel insurance. You're like that knowledgeable friend who always looks out for others.
+=======
+      
+      // Build FAQ context
+      const context = {
+        user_trip: tripData,
+        selected_policy: session.selected_plan?.name || 'Travel insurance',
+        policy_context: policyContext
+      };
+      
+      // Use Groq to answer the question
+      const selectedPlan = session.selected_plan || session.recommended_plans?.[0];
+      const planName = selectedPlan?.name || 'travel insurance';
+      
+      const prompt = `You're TripKaki — a real Singaporean friend helping with travel insurance. Talk like you're texting, not like an AI chatbot. Be natural, spontaneous, vary your responses.
+>>>>>>> Stashed changes
 
 Selected Policy: ${planName}
-
-${Object.keys(policyContext).length > 0 ? `Policy Details: ${JSON.stringify(policyContext)}` : 'Note: Policy details are still being collected.'}
-
-${Object.keys(tripData).length > 0 ? `User's Trip: ${JSON.stringify(tripData)}` : 'Note: User trip details are still being collected.'}
+${Object.keys(policyContext).length > 0 ? `Policy Details: ${JSON.stringify(policyContext)}` : ''}
+${Object.keys(tripData).length > 0 ? `User's Trip: ${JSON.stringify(tripData)}` : ''}
 
 Question: ${question}
 
+<<<<<<< Updated upstream
 Answer like you're talking to a close friend - be helpful, caring, and use natural Singaporean expressions. Keep it conversational and personal:
 - Use "lah", "leh", "ah", "can", "sia" naturally (don't force it)
 - Be protective and caring like a good friend would be
@@ -1019,27 +1174,46 @@ Answer like you're talking to a close friend - be helpful, caring, and use natur
 IMPORTANT: Always relate back to their specific trip when possible. If asking about coverage, explain it in context of their destination/activities. If you don't have their trip details yet, be friendly about it - "Let me get your trip details first, then I can give you super specific advice about what you need!"
 
 Make it feel like talking to that friend who really knows insurance and wants to help you make the right choice.`;
+=======
+Answer naturally:
+- Use Singlish naturally: "lah", "leh", "ah", "lor", "can or not"
+- Vary your sentences — sometimes short, sometimes longer
+- Start differently each time: "Oh", "Actually", "Hmm", "Yeah", "Wah"
+- After answering, naturally flow into asking about their trip (don't force it)
+
+Examples of natural responses:
+- "Oh that one ah, yeah it's covered. So your trip is how many days total?"
+- "Hmm, let me think... yep that one can one lah. Where else you planning to go?"
+- "Actually quite good for that. So after that place, where you heading next?"
+- "Yeah that's included. How many days you staying there leh?"
+
+Be human. Sound like you're really thinking and responding, not reading from a script.`;
+>>>>>>> Stashed changes
 
       const completion = await groqService.client.chat.completions.create({
         model: groqService.model,
         messages: [
           {
             role: 'system',
-            content: 'You are TripKaki, a friendly Singaporean travel insurance assistant. Answer questions about travel insurance policies in a conversational, helpful way. Be empathetic and natural.'
+            content: 'You are TripKaki, a real Singaporean friend helping with travel insurance. You are NOT an AI chatbot — you are a real person texting. Be natural, spontaneous, vary your responses every time. Use Singlish naturally ("lah", "leh", "ah", "lor"). Sometimes start with "Oh", "Actually", "Hmm", "Wah". Vary sentence length. Sound human, not scripted. After answering questions, naturally flow into asking about their trip plans.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.7
+        temperature: 0.9
       });
       
       return completion.choices[0].message.content;
     } catch (error) {
       console.error('Error handling FAQ:', error);
+<<<<<<< Updated upstream
       return "Sorry, I'm having trouble answering that right now. Could you try rephrasing your question?";
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+      return "Sorry leh, having some trouble answering that right now. Can try rephrasing your question anot?";
+>>>>>>> Stashed changes
     }
   }
 
@@ -1196,25 +1370,37 @@ Make it feel like talking to that friend who really knows insurance and wants to
     const missingFields = this.getMissingFields(tripData);
     
     if (missingFields.length === 0) {
+<<<<<<< Updated upstream
 <<<<<<< HEAD
       return "What else should I know about your trip ah?";
 =======
       return "Anything else I should know about your trip?";
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+      return "What else should I know about your trip ah?";
+>>>>>>> Stashed changes
     }
     
     // Map field names to natural prompts - ask one at a time, friendly style
     const fieldPrompts = {
+<<<<<<< Updated upstream
 <<<<<<< HEAD
       'name': "What's your name ah?",
       'age': "How old are you leh?",
       'trip_type': "Is this a round trip or single trip?",
       'departure_date': "What's your departure date ah? You can say 'today', 'tomorrow', or give me a date.",
       'trip_duration': "How many days is your trip ah?",
+=======
+      'name': "What's your name ah?",
+      'age': "How old are you leh?",
+      'trip_type': "Is this a round trip or single trip?",
+      'departure_date': "What's your departure date ah?",
+>>>>>>> Stashed changes
       'return_date': "What's your return date?",
       'departure_country': "Which country you leaving from ah?",
       'arrival_country': "Which country you traveling to?",
       'number_of_adults': "How many adults traveling leh?"
+<<<<<<< Updated upstream
 =======
       'name': "What should I call you?",
       'age': "How old are you?", 
@@ -1225,19 +1411,25 @@ Make it feel like talking to that friend who really knows insurance and wants to
       'arrival_country': "Where are you headed to?",
       'number_of_adults': "How many adults going on this trip?"
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+>>>>>>> Stashed changes
     };
     
     // Return only the first missing field
     const firstMissingField = missingFields[0];
+<<<<<<< Updated upstream
 <<<<<<< HEAD
     return fieldPrompts[firstMissingField] || "What else should I know about your trip ah?";
 =======
     return fieldPrompts[firstMissingField] || "Tell me more about your trip lah!";
 >>>>>>> 501c300a2aba07e5ef4cbde70ba7143ab960b9b0
+=======
+    return fieldPrompts[firstMissingField] || "What else should I know about your trip ah?";
+>>>>>>> Stashed changes
   }
 
   _generateBindSummary(tripData) {
-    let summary = "Let me read this back:\n\n";
+    let summary = "Okay, let me read this back for you:\n\n";
     
     // Personal Information
     if (tripData.name) summary += `Name: ${tripData.name}\n`;
