@@ -396,33 +396,38 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     if (step === 'trip_intake') {
       if (this.isTripDataComplete(tripData)) {
         const summary = this._summarizeTrip(tripData);
-        responseText = `Perfect. So that's ${summary} — correct?`;
+        responseText = `Nice! So that's ${summary}. Sounds like it'll be a great trip! This correct ah?`;
         nextStep = 'persona_classification';
       } else {
         const missing = this._getMissingInfo(tripData);
-        responseText = `Got it. ${missing}`;
+        // Add some friendly acknowledgment first
+        const acknowledgments = [
+          "Got it!", "Okay!", "Noted!", "Right!", "Cool!", "Alright!"
+        ];
+        const randomAck = acknowledgments[Math.floor(Math.random() * acknowledgments.length)];
+        responseText = `${randomAck} ${missing}`;
       }
     }
     
     // STEP 2: PERSONA CLASSIFICATION
     else if (step === 'persona_classification') {
-      if (['yes', 'correct', 'yep', "that's right"].includes(message.toLowerCase())) {
+      if (['yes', 'correct', 'yep', "that's right", 'ya', 'yeah', 'right'].includes(message.toLowerCase().trim())) {
         const persona = await groqService.classifyPersona(tripData);
         session.persona = persona;
         
         const personaMessages = {
-          'Chill Voyager': "This sounds like a Chill Voyager trip — relaxed, low-risk, and you want peace of mind without the fuss.",
-          'Adventurous Explorer': "This sounds like an Adventurous Explorer trip — outdoors, active, and where you can't afford a medical emergency in the mountains.",
-          'Family Guardian': "This sounds like a Family Guardian trip — keeping your loved ones safe is the priority, and medical coverage can't be compromised.",
-          'Business Nomad': "This sounds like a Business Nomad trip — tight schedules, work commitments, and delays just can't happen.",
-          'Romantic Escaper': "This sounds like a Romantic Escaper trip — couple time, honeymoon vibes, and you want flexibility if plans change.",
-          'Cultural Explorer': "This sounds like a Cultural Explorer trip — multiple cities, longer stays, and luggage protection matters."
+          'Chill Voyager': "Ah, I can tell this is a Chill Voyager trip lah — nice and relaxed! You want good coverage without all the complicated stuff right?",
+          'Adventurous Explorer': "Wah, Adventurous Explorer vibes! 🏔️ Active trip means we need solid medical coverage - can't have you stuck somewhere with hospital bills sia.",
+          'Family Guardian': "This one is Family Guardian mode - protecting your loved ones is priority number one! Medical coverage confirm cannot compromise one.",
+          'Business Nomad': "Business Nomad style! Time is money, so we need coverage for delays and cancellations. Cannot let work kena affected.",
+          'Romantic Escaper': "Aww, Romantic Escaper trip! 💕 Couple time is precious, so we want flexibility in case plans need to change lah.",
+          'Cultural Explorer': "Cultural Explorer adventure! Multiple places, longer trip - your luggage and gear need extra protection for sure."
         };
         
-        responseText = personaMessages[persona] || "Let me find the right plan for your trip.";
+        responseText = personaMessages[persona] || "Alright, let me find the perfect plan for your adventure!";
         nextStep = 'plan_recommendation';
       } else {
-        responseText = "No worries, let me update that. What needs changing?";
+        responseText = "No problem! What should I update? Just tell me what's different and I'll fix it 😊";
       }
     }
     
@@ -442,17 +447,18 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         }
         
         // Combine recommendation with risk assessment in one message
-        responseText = `For your trip, I recommend ${recommended.name} for SGD $${recommended.price}.`;
+        responseText = `Perfect! Based on your trip, I think **${recommended.name}** is your best bet - SGD $${recommended.price}. 👍\n\n`;
         
         const riskLevel = claimsIntel.risk_level || 'medium';
         const topCauses = claimsIntel.top_claim_causes || [];
         
         if (topCauses.length > 0) {
-          responseText += `\n\nFor ${tripData.arrival_country || tripData.destination || 'your destination'}, the risk level is ${riskLevel}.`;
-          responseText += ` Common claims there are: ${topCauses.slice(0, 3).join(', ')}.`;
+          const riskEmoji = riskLevel === 'high' ? '⚠️' : riskLevel === 'low' ? '✅' : '📊';
+          responseText += `${riskEmoji} **${tripData.arrival_country || tripData.destination || 'Your destination'}** has ${riskLevel} risk level. `;
+          responseText += `Most common claims there are: ${topCauses.slice(0, 3).join(', ')}.\n\n`;
         }
         
-        responseText += ` This plan will cover you well for your trip. Ready to confirm your details?`;
+        responseText += `This plan covers all the important stuff for your kind of trip. Want to see other options to compare, or shall we go with this one? 😊`;
         
         session.recommended_plans = [recommended];
         session.selected_plan = recommended;
@@ -462,10 +468,10 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         // Skip add_ons and coverage_gap, go straight to bind_check
         nextStep = 'bind_check';
       } else if (session.plans_shown) {
-        // Check if user wants to compare plans
-        if (message.toLowerCase().includes('compare')) {
+        // Check if user wants to compare plans or asks questions
+        if (message.toLowerCase().includes('compare') || message.toLowerCase().includes('options') || message.toLowerCase().includes('other plans')) {
           if (policyDatabase) {
-            // Generate prices for all products
+            // Generate prices for all products with different scenarios
             const allProductsWithPrices = [
               await policyDatabase.recommendProduct({ ...tripData, existing_conditions: false, trip_type: 'ST', activities: [] }), // Scootsurance scenario
               await policyDatabase.recommendProduct({ ...tripData, existing_conditions: false, trip_type: 'RT', activities: ['sightseeing'] }), // TravelEasy scenario
@@ -474,23 +480,96 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
             
             const recommended = session.selected_plan;
             
-            responseText = "Here are all the available plans:\n\n";
+            responseText = "Ah, you want to see all options? No problem lah! Let me break it down for you:\n\n";
+            
             for (const product of allProductsWithPrices) {
               const isRecommended = product.key === recommended.key;
-              responseText += `${isRecommended ? '✓ ' : ''}${product.name} – SGD $${product.price}\n`;
+              responseText += `${isRecommended ? '✅ ' : '💡 '}**${product.name}** – SGD $${product.price}\n`;
+              
+              // Add personalized explanations
+              if (product.name.includes('Scootsurance')) {
+                responseText += "   → Perfect for short trips, no medical issues, budget-conscious\n";
+              } else if (product.name.includes('TravelEasy') && !product.name.includes('Pre-Ex')) {
+                responseText += "   → Great for longer trips, includes activities, comprehensive coverage\n";
+              } else if (product.name.includes('Pre-Ex')) {
+                responseText += "   → Must-have if you have existing medical conditions\n";
+              }
+              responseText += "\n";
             }
             
-            responseText += "\nTop 3 differences:\n\n";
-            responseText += "1. Scootsurance: Budget-friendly for short trips without pre-existing conditions.\n";
-            responseText += "2. TravelEasy Policy: Better coverage for round trips with activities.\n";
-            responseText += "3. TravelEasy Pre-Ex: Essential if you have medical conditions.\n\n";
-            responseText += `I still recommend ${recommended.name} for your specific needs. Ready to confirm your details?`;
+            responseText += "🎯 **Why I recommend " + recommended.name + " for you:**\n";
+            
+            // Personalized recommendation based on trip data
+            if (tripData.destination && tripData.trip_start_date) {
+              responseText += `Based on your ${tripData.destination} trip`;
+              if (tripData.existing_conditions) {
+                responseText += " and your medical needs";
+              }
+              if (tripData.activities && tripData.activities.length > 0) {
+                responseText += ` plus your planned activities (${tripData.activities.join(', ')})`;
+              }
+              responseText += ", this plan gives you the best value and coverage lah.\n\n";
+            }
+            
+            // Suggest add-ons based on destination and activities
+            responseText += "💡 **Smart add-ons I'd suggest:**\n";
+            if (tripData.destination && (tripData.destination.toLowerCase().includes('japan') || tripData.destination.toLowerCase().includes('korea'))) {
+              responseText += "• Winter Sports Cover (+$15) - Good for ski season\n";
+            }
+            if (tripData.activities && tripData.activities.some(a => a.includes('adventure') || a.includes('extreme'))) {
+              responseText += "• Adventure Sports Cover (+$25) - Essential for your activities\n";
+            }
+            responseText += "• Gadget Protection (+$12) - Covers your phone/camera/laptop\n";
+            responseText += "• Travel Delay Cover (+$8) - Extra protection for flight delays\n\n";
+            
+            responseText += "Want me to add any of these, or shall we stick with the main plan? Either way also can! 😊";
+            
           } else {
-            responseText = "Let me get the comparison for you.";
+            responseText = "Let me get the comparison for you lah.";
           }
+        } else if (message.toLowerCase().includes('add') && (message.toLowerCase().includes('on') || message.toLowerCase().includes('extra'))) {
+          // User asking about add-ons
+          responseText = "Wah, smart thinking! Let me suggest some add-ons that make sense for your trip:\n\n";
+          
+          responseText += "🛡️ **Recommended for you:**\n";
+          if (tripData.destination) {
+            if (tripData.destination.toLowerCase().includes('europe')) {
+              responseText += "• Schengen Medical (+$18) - Higher medical limits for Europe\n";
+            } else if (tripData.destination.toLowerCase().includes('usa') || tripData.destination.toLowerCase().includes('america')) {
+              responseText += "• USA Medical Boost (+$35) - USA healthcare is expensive sia\n";
+            }
+          }
+          
+          responseText += "• Gadget Shield (+$12) - Your phone, camera, laptop all covered\n";
+          responseText += "• Travel Delay Plus (+$8) - Extra money if flights get delayed\n";
+          if (tripData.activities && tripData.activities.length > 0) {
+            responseText += "• Activity Cover (+$20) - For your planned activities\n";
+          }
+          responseText += "\n📱 Just tell me which ones you want, like 'add gadget shield' and I'll update your plan!";
+          
+        } else if (message.toLowerCase().includes('cheaper') || message.toLowerCase().includes('budget') || message.toLowerCase().includes('save')) {
+          // User looking for cheaper options
+          responseText = "I get it, budget is important! Let me see if got cheaper options for you...\n\n";
+          
+          if (policyDatabase) {
+            const budgetOption = await policyDatabase.recommendProduct({ ...tripData, existing_conditions: false, trip_type: 'ST', activities: [] });
+            responseText += `💰 **Budget Option:** ${budgetOption.name} - SGD $${budgetOption.price}\n`;
+            responseText += "This one covers the essentials lah, but less comprehensive.\n\n";
+          }
+          
+          responseText += "Actually, let me ask - what's your main concern? Medical coverage? Lost luggage? Trip cancellation?\n";
+          responseText += "I can help you pick the minimum coverage that still protects you properly 👍";
+          
         } else {
-          // User accepts or any other response - go to bind_check
-          responseText = "Great! Let me confirm your details now.";
+          // User seems ready or has other response - be more conversational
+          const positiveResponses = ['yes', 'ok', 'good', 'sure', 'sounds good', 'great', 'perfect'];
+          const isPositive = positiveResponses.some(word => message.toLowerCase().includes(word));
+          
+          if (isPositive) {
+            responseText = "Awesome! You made a good choice 👍 Let me confirm all your details now.";
+          } else {
+            responseText = "No worries! If you have any other questions about the coverage, just ask lah. Otherwise, let's confirm your details?";
+          }
           nextStep = 'bind_check';
         }
       } else {
@@ -501,16 +580,17 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     // STEP 4: BIND CHECK
     else if (step === 'bind_check') {
       if (!session.bind_summary_shown) {
-        responseText = this._generateBindSummary(tripData);
-        responseText += "\n\nIs everything above accurate, and do you confirm it's correct?";
+        responseText = "Alright, let me double-check everything with you:\n\n";
+        responseText += this._generateBindSummary(tripData);
+        responseText += "\n\nLooks good? If everything's accurate just give me a 'yes' and we'll proceed to payment! 👍";
         session.bind_summary_shown = true;
         requiresAction = 'confirm_binding';
       } else {
-        if (['yes', 'correct', 'accurate', 'confirm', "that's right", 'yes confirm'].includes(message.toLowerCase())) {
+        if (['yes', 'correct', 'accurate', 'confirm', "that's right", 'yes confirm', 'looks good', 'all good'].includes(message.toLowerCase().trim())) {
           nextStep = 'payment';
-          responseText = "Perfect. Moving to payment.";
+          responseText = "Awesome! Everything confirmed. Let's get this paid for you! 💳";
         } else {
-          responseText = "Let me know what needs adjusting, and I'll update it.";
+          responseText = "No problem! Just tell me what needs changing and I'll update it for you lah 😊";
         }
       }
     }
@@ -519,16 +599,16 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     else if (step === 'payment') {
       if (!session.payment_message_shown) {
         const totalPrice = this._calculateTotal(session);
-        responseText = `Total is $${totalPrice} SGD for ${tripData.number_of_travellers || 1} traveller(s), covering ${tripData.trip_start_date} to ${tripData.trip_end_date}.\n\n`;
-        responseText += "I'll open a secure payment screen to take your card. Once paid, I'll activate your cover instantly and drop your emergency medical card here. Proceed?";
+        responseText = `Alright! Total comes to **SGD $${totalPrice}** for ${tripData.number_of_travellers || 1} traveller(s), covering ${tripData.trip_start_date} to ${tripData.trip_end_date}. 💳\n\n`;
+        responseText += "I'll open the secure payment page for you. Once payment goes through, your coverage starts immediately and I'll give you your emergency contact card right here. Ready to proceed?";
         requiresAction = 'payment';
         session.payment_message_shown = true;
       } else {
-        if (['proceed', 'yes', 'ok'].includes(message.toLowerCase())) {
+        if (['proceed', 'yes', 'ok', 'sure', 'go ahead'].includes(message.toLowerCase())) {
           nextStep = 'post_purchase';
           responseText = '';
         } else {
-          responseText = "Please use the payment button to proceed.";
+          responseText = "Just click the payment button when you're ready lah! 😊";
         }
       }
     }
@@ -536,10 +616,12 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     // STEP 6: POST-PURCHASE
     else if (step === 'post_purchase') {
       if (!session.post_purchase_shown) {
-        responseText = "✅ Paid and confirmed — your travel insurance is now active.\n\n";
-        responseText += "If your luggage's delayed 6+ hours, get the airline report, snap a photo, and send it here — I'll prep your claim.\n";
-        responseText += "If anyone feels unwell, just say 'medical help' and I'll show the nearest approved clinic so you don't pay cash.\n\n";
-        responseText += "I've saved your emergency card and claim instructions in this chat — you can pull them up anytime during your trip.";
+        responseText = "🎉 **Woohoo! All done lah!** Your travel insurance is now active and ready to protect you!\n\n";
+        responseText += "📱 **Quick reminders for your trip:**\n";
+        responseText += "• Luggage delayed 6+ hours? Get that airline report, take photos, send to me - I'll sort out your claim!\n";
+        responseText += "• Feeling unwell anywhere? Just message 'medical help' and I'll find you the nearest approved clinic (no cash payment needed!)\n\n";
+        responseText += "💡 **Pro tip:** I've saved your emergency card and all claim instructions right here in our chat. Just scroll up anytime during your trip to find them!\n\n";
+        responseText += "Have an amazing trip! I'll be here if you need anything 😊";
         
         data = {
           policy_number: session.policy_number || 'POL-ACTIVE',
@@ -547,12 +629,14 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         };
         session.post_purchase_shown = true;
       } else {
-        if (message.toLowerCase().includes('medical') || message.toLowerCase().includes('help')) {
-          responseText = "For medical emergencies, call the 24/7 helpline: +65-XXXX-XXXX. They'll direct you to the nearest approved clinic. Save your receipts!";
-        } else if (message.toLowerCase().includes('luggage') || message.toLowerCase().includes('baggage') || message.toLowerCase().includes('claim')) {
-          responseText = "For delayed/lost luggage claims: Get a Property Irregularity Report (PIR) from the airline, take photos, and submit here with your policy number. Claims are typically processed within 5-7 business days.";
+        if (message.toLowerCase().includes('medical') || message.toLowerCase().includes('help') || message.toLowerCase().includes('emergency')) {
+          responseText = "🚨 **Medical Emergency Support:**\n24/7 Hotline: +65-XXXX-XXXX\n\nThey'll find you the nearest approved clinic so you don't need to pay upfront. Keep your receipts safe ah!";
+        } else if (message.toLowerCase().includes('luggage') || message.toLowerCase().includes('baggage') || message.toLowerCase().includes('claim') || message.toLowerCase().includes('lost')) {
+          responseText = "📦 **Luggage Claim Process:**\n1. Get Property Irregularity Report (PIR) from airline\n2. Take photos of everything\n3. Send me the docs with your policy number\n4. Claims usually processed in 5-7 days\n\nDon't worry, I'll guide you through it! 👍";
+        } else if (message.toLowerCase().includes('thank') || message.toLowerCase().includes('bye')) {
+          responseText = "You're welcome! Enjoy your trip and stay safe! If anything happens, just come back here and I'll help you sort it out. Have fun! 🌟✈️";
         } else {
-          responseText = "I'm here to help! Say 'medical help' for emergency contacts, or 'claim' for filing instructions.";
+          responseText = "I'm always here to help during your trip! Just say:\n• 'medical help' for emergency contacts\n• 'claim' for filing instructions\n• Or ask me anything else! 😊";
         }
       }
     }
@@ -610,7 +694,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
       const selectedPlan = session.selected_plan || session.recommended_plans?.[0];
       const planName = selectedPlan?.name || 'travel insurance';
       
-      const prompt = `You are TripKaki, a friendly Singaporean travel insurance assistant. Answer this question about travel insurance.
+      const prompt = `You are TripKaki, a friendly Singaporean travel insurance buddy helping your friend with travel insurance. You're like that knowledgeable friend who always looks out for others.
 
 Selected Policy: ${planName}
 
@@ -620,9 +704,16 @@ ${Object.keys(tripData).length > 0 ? `User's Trip: ${JSON.stringify(tripData)}` 
 
 Question: ${question}
 
-Provide a helpful, conversational answer. Sound like a friendly Singaporean: short sentences, calm, use some Singlish naturally like "lah", "leh", "ah" (but don't overdo it). 
+Answer like you're talking to a close friend - be helpful, caring, and use natural Singaporean expressions. Keep it conversational and personal:
+- Use "lah", "leh", "ah", "can", "sia" naturally (don't force it)
+- Be protective and caring like a good friend would be
+- Give practical advice and real examples
+- Compare options when relevant 
+- Suggest add-ons or alternatives if it helps them
 
-IMPORTANT: If the user is asking about coverage or benefits, use the policy information provided. If they're asking about what's covered but we don't have policy details yet, politely explain that you're still gathering their trip info first, then you'll be able to answer their specific questions about coverage.`;
+IMPORTANT: Always relate back to their specific trip when possible. If asking about coverage, explain it in context of their destination/activities. If you don't have their trip details yet, be friendly about it - "Let me get your trip details first, then I can give you super specific advice about what you need!"
+
+Make it feel like talking to that friend who really knows insurance and wants to help you make the right choice.`;
 
       const completion = await groqService.client.chat.completions.create({
         model: groqService.model,
@@ -673,24 +764,24 @@ IMPORTANT: If the user is asking about coverage or benefits, use the policy info
     const missingFields = this.getMissingFields(tripData);
     
     if (missingFields.length === 0) {
-      return "What else should I know about your trip?";
+      return "Anything else I should know about your trip?";
     }
     
-    // Map field names to natural prompts - ask one at a time
+    // Map field names to natural prompts - ask one at a time, friendly style
     const fieldPrompts = {
-      'name': "What's your name?",
-      'age': "How old are you?",
-      'trip_type': "Is this a round trip or single trip?",
-      'departure_date': "What's your departure date?",
-      'return_date': "What's your return date?",
-      'departure_country': "Which country are you leaving from?",
-      'arrival_country': "Which country are you traveling to?",
-      'number_of_adults': "How many adults are traveling?"
+      'name': "What should I call you?",
+      'age': "How old are you?", 
+      'trip_type': "Round trip or one-way?",
+      'departure_date': "When are you flying out?",
+      'return_date': "And when do you come back?",
+      'departure_country': "Which country you leaving from?",
+      'arrival_country': "Where are you headed to?",
+      'number_of_adults': "How many adults going on this trip?"
     };
     
     // Return only the first missing field
     const firstMissingField = missingFields[0];
-    return fieldPrompts[firstMissingField] || "What else should I know about your trip?";
+    return fieldPrompts[firstMissingField] || "Tell me more about your trip lah!";
   }
 
   _generateBindSummary(tripData) {
