@@ -4,6 +4,7 @@ import multer from 'multer';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import Stripe from 'stripe';
 import { GroqService } from './groqService.js';
 import { ConversationManager } from './conversationManager.js';
 import { TaxonomyEngine } from './services/taxonomyEngine.js';
@@ -12,6 +13,7 @@ import { MCPTools } from './services/mcpTools.js';
 import { ClaimsIntelligence } from './services/claimsIntelligence.js';
 import { GroqIntelligence } from './services/groqIntelligence.js';
 import { PolicyDatabase } from './services/policyDatabase.js';
+import { QueryClassifier } from './services/queryClassifier.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,6 +28,9 @@ app.use(express.json());
 // Serve static files from frontend directory
 app.use(express.static(join(__dirname, '../frontend')));
 
+// Initialize Stripe
+const stripe = new Stripe('sk_test_51SOou8KIVh1pb6k1cROoDW1fBAJMLPtzUYt9dDlWstmYpfrQB6DMIejaDKoChzr8NJizhMqJplpZHR8REnoMgKSF00XlqmHMoj');
+
 // Initialize services
 const groqService = new GroqService();
 const conversationManager = new ConversationManager();
@@ -35,6 +40,7 @@ const mcpTools = new MCPTools();
 const claimsIntelligence = new ClaimsIntelligence();
 const groqIntelligence = new GroqIntelligence();
 const policyDatabase = new PolicyDatabase();
+const queryClassifier = new QueryClassifier();
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -108,10 +114,119 @@ app.post('/api/session/:sessionId/confirm', async (req, res) => {
   }
 });
 
+// Create Stripe Payment Intent
+app.post('/api/create-payment-intent', async (req, res) => {
+  try {
+    const { amount, currency = 'sgd', session_id } = req.body;
+    
+    if (!amount) {
+      return res.status(400).json({ error: 'Amount is required' });
+    }
+    
+    // Convert amount to cents (Stripe uses smallest currency unit)
+    const amountInCents = Math.round(parseFloat(amount) * 100);
+    
+    if (isNaN(amountInCents) || amountInCents <= 0) {
+      return res.status(400).json({ error: 'Invalid amount' });
+    }
+    
+    // Check if Stripe is properly initialized
+    if (!stripe) {
+      console.error('Stripe not initialized');
+      return res.status(500).json({ error: 'Payment service unavailable' });
+    }
+    
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: currency.toLowerCase(),
+      metadata: {
+        session_id: session_id || '',
+        description: 'Travel Insurance Policy'
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+    
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    // Always return JSON, never HTML
+    res.status(500).json({ 
+      error: error.message || 'Failed to create payment intent',
+      details: error.type || 'unknown_error'
+    });
+  }
+});
+
+// Confirm Stripe Payment
+app.post('/api/confirm-payment', async (req, res) => {
+  try {
+    const { paymentIntentId, sessionId } = req.body;
+    
+    if (!paymentIntentId) {
+      return res.status(400).json({ error: 'Payment intent ID is required' });
+    }
+    
+    // Retrieve the payment intent to check status
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    if (paymentIntent.status === 'succeeded') {
+      // Get session
+      const session = conversationManager.getSession(sessionId);
+      
+      if (session) {
+        // Get plan info from session
+        const selectedPlan = session.selected_plan || session.recommended_plans?.[0];
+        const planId = selectedPlan?.key || selectedPlan?.plan_id || 'default';
+        const quotationId = `QUOTE-${sessionId}`;
+        
+        // Use MCP purchase tool to create policy
+        const purchaseResult = await mcpTools.purchasePolicy(
+          quotationId,
+          planId,
+          { payment_method: 'stripe', payment_intent_id: paymentIntentId },
+          session.trip_data
+        );
+        
+        if (purchaseResult.success) {
+          session.step = 'post_purchase';
+          session.payment_status = 'completed';
+          session.policy_number = purchaseResult.policy_number;
+          session.policy_data = purchaseResult;
+          session.stripe_payment_intent_id = paymentIntentId;
+          conversationManager.updateSession(sessionId, session);
+          
+          res.json({
+            status: 'paid',
+            policy_number: purchaseResult.policy_number,
+            policy_pdf_url: purchaseResult.policy_pdf_url,
+            emergency_card_url: purchaseResult.emergency_card_url,
+            step: 'post_purchase',
+            payment_intent_id: paymentIntentId
+          });
+        } else {
+          res.status(400).json({ error: 'Policy creation failed', details: purchaseResult });
+        }
+      } else {
+        res.status(404).json({ error: 'Session not found' });
+      }
+    } else {
+      res.status(400).json({ error: 'Payment not completed', status: paymentIntent.status });
+    }
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/session/:sessionId/payment', async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { quotation_id, plan_id, payment_details, customer_info } = req.body;
+    const { payment_intent_id } = req.body;
     const session = conversationManager.getSession(sessionId);
     
     if (!session) {
@@ -122,30 +237,84 @@ app.post('/api/session/:sessionId/payment', async (req, res) => {
       return res.status(400).json({ error: 'Not in payment step' });
     }
     
-    // Use MCP purchase tool
-    const purchaseResult = await mcpTools.purchasePolicy(
-      quotation_id,
-      plan_id,
-      payment_details,
-      customer_info || session.trip_data
-    );
-    
-    if (purchaseResult.success) {
-      session.step = 'post_purchase';
-      session.payment_status = 'completed';
-      session.policy_number = purchaseResult.policy_number;
-      session.policy_data = purchaseResult;
-      conversationManager.updateSession(sessionId, session);
+    // If payment intent ID is provided, confirm the payment
+    if (payment_intent_id) {
+      const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
       
-      res.json({
-        status: 'paid',
-        policy_number: purchaseResult.policy_number,
-        policy_pdf_url: purchaseResult.policy_pdf_url,
-        emergency_card_url: purchaseResult.emergency_card_url,
-        step: 'post_purchase'
-      });
+      if (paymentIntent.status === 'succeeded') {
+        // Get plan info from session
+        const selectedPlan = session.selected_plan || session.recommended_plans?.[0];
+        const planId = selectedPlan?.key || selectedPlan?.plan_id || 'default';
+        const quotationId = `QUOTE-${sessionId}`;
+        
+        // Use MCP purchase tool
+        const purchaseResult = await mcpTools.purchasePolicy(
+          quotationId,
+          planId,
+          { payment_method: 'stripe', payment_intent_id: payment_intent_id },
+          session.trip_data
+        );
+        
+        if (purchaseResult.success) {
+          session.step = 'post_purchase';
+          session.payment_status = 'completed';
+          session.policy_number = purchaseResult.policy_number;
+          session.policy_data = purchaseResult;
+          session.stripe_payment_intent_id = payment_intent_id;
+          conversationManager.updateSession(sessionId, session);
+          
+          res.json({
+            status: 'paid',
+            policy_number: purchaseResult.policy_number,
+            policy_pdf_url: purchaseResult.policy_pdf_url,
+            emergency_card_url: purchaseResult.emergency_card_url,
+            step: 'post_purchase'
+          });
+        } else {
+          res.status(400).json({ error: 'Payment failed', details: purchaseResult });
+        }
+      } else {
+        res.status(400).json({ error: 'Payment not completed', status: paymentIntent.status });
+      }
     } else {
-      res.status(400).json({ error: 'Payment failed', details: purchaseResult });
+      // Legacy: Use fake payment details if no payment intent
+      const fakePaymentDetails = {
+        card_number: '4111111111111111',
+        cardholder_name: session.trip_data.name || 'John Doe',
+        expiry_date: '12/25',
+        cvv: '123',
+        billing_email: 'customer@example.com',
+        billing_address: '123 Test Street, Singapore 123456'
+      };
+      
+      const selectedPlan = session.selected_plan || session.recommended_plans?.[0];
+      const planId = selectedPlan?.key || selectedPlan?.plan_id || 'default';
+      const quotationId = `QUOTE-${sessionId}`;
+      
+      const purchaseResult = await mcpTools.purchasePolicy(
+        quotationId,
+        planId,
+        fakePaymentDetails,
+        session.trip_data
+      );
+      
+      if (purchaseResult.success) {
+        session.step = 'post_purchase';
+        session.payment_status = 'completed';
+        session.policy_number = purchaseResult.policy_number;
+        session.policy_data = purchaseResult;
+        conversationManager.updateSession(sessionId, session);
+        
+        res.json({
+          status: 'paid',
+          policy_number: purchaseResult.policy_number,
+          policy_pdf_url: purchaseResult.policy_pdf_url,
+          emergency_card_url: purchaseResult.emergency_card_url,
+          step: 'post_purchase'
+        });
+      } else {
+        res.status(400).json({ error: 'Payment failed', details: purchaseResult });
+      }
     }
   } catch (error) {
     console.error('Payment error:', error);
@@ -324,41 +493,84 @@ app.post('/api/compare-policies', (req, res) => {
   }
 });
 
-// BLOCK 2: Conversational FAQ & Query Routing
+// BLOCK 2: Intelligent Query Classification & Routing
+app.post('/api/query', async (req, res) => {
+  try {
+    const { question, session_id } = req.body;
+    
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required' });
+    }
+
+    // Get session if available for trip context
+    let tripData = {};
+    if (session_id) {
+      const session = conversationManager.getSession(session_id);
+      if (session) {
+        tripData = session.trip_data || {};
+      }
+    }
+
+    // Process query through intelligent classification system
+    const result = await queryClassifier.processQuery(question, policyDatabase, tripData);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Query classification error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      query_type: 'explanation',
+      message: 'Sorry, I encountered an error processing your question.'
+    });
+  }
+});
+
+// BLOCK 2: Conversational FAQ & Query Routing (Legacy - now uses QueryClassifier)
 app.post('/api/faq', async (req, res) => {
   try {
-    const { question, policy_context, query_type } = req.body;
+    const { question, policy_context, query_type, session_id } = req.body;
     
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required' });
+    }
+
+    // Get session if available
+    let tripData = {};
+    if (session_id) {
+      const session = conversationManager.getSession(session_id);
+      if (session) {
+        tripData = session.trip_data || {};
+      }
+    }
+
     let response;
     
-    switch (query_type) {
-      case 'comparison':
-        // Use normalized taxonomy for comparison
-        response = await taxonomyEngine.comparePlans(policy_context.plans || []);
-        break;
-      
-      case 'explanation':
-        // Use raw text + context for detailed explanation
-        response = await taxonomyEngine.getFAQResponse(question, policy_context);
-        break;
-      
-      case 'eligibility':
-        // Use both normalized and raw
-        const condition = question.toLowerCase().includes('diabetes') ? 'diabetes' : 
-                         question.toLowerCase().includes('age') ? 'age' : 'general';
-        response = taxonomyEngine.checkEligibility(condition, policy_context);
-        break;
-      
-      case 'scenario':
-        // Use Groq to simulate coverage
-        response = await groqIntelligence.simulateCoverage(question, policy_context);
-        break;
-      
-      default:
-        response = await taxonomyEngine.getFAQResponse(question, policy_context);
+    // If query_type is explicitly provided, use it; otherwise classify
+    if (query_type && ['comparison', 'explanation', 'eligibility', 'scenario'].includes(query_type)) {
+      // Route based on explicit type
+      switch (query_type) {
+        case 'comparison':
+          response = await queryClassifier.comparePolicies(question, policyDatabase, tripData);
+          break;
+        
+        case 'explanation':
+          response = await queryClassifier.explainCoverage(question, policyDatabase, tripData);
+          break;
+        
+        case 'eligibility':
+          response = await queryClassifier.checkEligibility(question, policyDatabase, tripData);
+          break;
+        
+        case 'scenario':
+          response = await queryClassifier.simulateScenario(question, policyDatabase, tripData);
+          break;
+      }
+    } else {
+      // Auto-classify and process
+      response = await queryClassifier.processQuery(question, policyDatabase, tripData);
     }
     
-    res.json({ response, query_type });
+    res.json(response);
   } catch (error) {
     console.error('FAQ error:', error);
     res.status(500).json({ error: error.message });

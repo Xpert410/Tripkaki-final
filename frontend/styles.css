@@ -402,6 +402,8 @@ body {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
     overflow: hidden;
+    height: calc(100vh - 120px);
+    max-height: calc(100vh - 120px);
 }
 
 .avatar-container {
@@ -650,11 +652,16 @@ body {
 .messages-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 24px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    min-height: 400px;
+    min-height: 0;
+    max-height: 100%;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
 }
 
 .message {

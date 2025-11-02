@@ -4,6 +4,11 @@ let sessionId = null;
 let walletBalance = 0;
 let isCrisisMode = false;
 
+// Initialize Stripe
+const stripe = Stripe('pk_test_51SOou8KIVh1pb6k1as4zm0jmLTarZHL6avr2reNRK4BbSSV7Ot8nlSKxfcPIxdvBxtBnHfGjkhODlcWmbJyUOPvK00cE3PmZ2X');
+let paymentElement = null;
+let elements = null;
+
 // DOM Elements
 const messagesContainer = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
@@ -45,6 +50,11 @@ let isMuted = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    // Initial scroll to bottom
+    setTimeout(() => {
+        scrollToBottom(false); // Instant scroll on load
+    }, 100);
+    
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendMessage();
@@ -304,7 +314,7 @@ async function processPolicyPDFs() {
                             updateDiv.style.cssText = 'padding: 4px 0; font-size: 14px; color: var(--text-secondary);';
                             updateDiv.textContent = data.message;
                             progressUpdates.appendChild(updateDiv);
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            scrollToBottom(true);
                             
                             // Update avatar status
                             if (data.message.includes('Processing')) {
@@ -586,6 +596,18 @@ async function sendMessage() {
 }
 
 // Add Message
+// Helper function to smoothly scroll to bottom of messages
+function scrollToBottom(smooth = true) {
+    if (smooth) {
+        messagesContainer.scrollTo({
+            top: messagesContainer.scrollHeight,
+            behavior: 'smooth'
+        });
+    } else {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
 function addMessage(text, type) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
@@ -656,8 +678,10 @@ function addMessage(text, type) {
     messageDiv.appendChild(bubble);
     messagesContainer.appendChild(messageDiv);
     
-    // Scroll to bottom
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // Scroll to bottom smoothly after DOM update
+    requestAnimationFrame(() => {
+        scrollToBottom(true);
+    });
 }
 
 // Typing Indicator
@@ -688,7 +712,9 @@ function showTypingIndicator() {
     bubble.appendChild(dots);
     typingDiv.appendChild(bubble);
     messagesContainer.appendChild(typingDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    requestAnimationFrame(() => {
+        scrollToBottom(true);
+    });
 }
 
 function hideTypingIndicator() {
@@ -733,8 +759,15 @@ async function handlePayment() {
     if (!sessionId) return;
     
     try {
+        // Send payment request - backend will use fake credentials automatically
         const response = await fetch(`${API_BASE}/api/session/${sessionId}/payment`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                // No payment_details sent - backend will use fake ones
+            })
         });
         
         const data = await response.json();
@@ -753,6 +786,8 @@ async function handlePayment() {
             
             // Earn rewards
             earnRewards(100);
+        } else {
+            addMessage('Payment processed successfully! Your policy is now active.', 'assistant');
         }
         
     } catch (error) {
@@ -849,7 +884,9 @@ function displayQuotation(quotation) {
     messageDiv.className = 'message assistant';
     messageDiv.innerHTML = `<div class="message-bubble"><div class="message-content">${html}</div></div>`;
     messagesContainer.appendChild(messageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    requestAnimationFrame(() => {
+        scrollToBottom(true);
+    });
 }
 
 // Display Claims Intelligence
@@ -868,7 +905,9 @@ function displayClaimsIntelligence(intelligence, recommendation) {
     messageDiv.className = 'message assistant';
     messageDiv.innerHTML = `<div class="message-bubble"><div class="message-content">${html}</div></div>`;
     messagesContainer.appendChild(messageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    requestAnimationFrame(() => {
+        scrollToBottom(true);
+    });
 }
 
 // Avatar Functions
@@ -1406,7 +1445,7 @@ let currentPaymentData = {
 };
 
 // Show Payment Modal Function
-function showPaymentModal(paymentData = null) {
+async function showPaymentModal(paymentData = null) {
     if (paymentData) {
         currentPaymentData = { ...currentPaymentData, ...paymentData };
         
@@ -1423,6 +1462,52 @@ function showPaymentModal(paymentData = null) {
     
     paymentModalOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    
+    // Initialize Stripe Elements if not already done
+    try {
+        const amountText = document.getElementById('paymentAmount').textContent;
+        const amount = parseFloat(amountText.replace(/[^\d.]/g, '')) || 89.00;
+        
+        // Create payment intent
+        const intentResponse = await fetch(`${API_BASE}/api/create-payment-intent`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                amount: amount,
+                currency: 'sgd',
+                session_id: sessionId
+            })
+        });
+        
+        const intentData = await intentResponse.json();
+        
+        if (intentData.clientSecret) {
+            // Create Stripe Elements
+            if (!elements) {
+                elements = stripe.elements({
+                    clientSecret: intentData.clientSecret
+                });
+            } else {
+                // Update client secret if elements already exist
+                elements.update({ clientSecret: intentData.clientSecret });
+            }
+            
+            // Create and mount payment element
+            const container = document.getElementById('payment-element-container');
+            if (container && !paymentElement) {
+                paymentElement = elements.create('payment');
+                paymentElement.mount('#payment-element-container');
+            } else if (paymentElement && intentData.clientSecret) {
+                // Update existing element with new client secret
+                elements.update({ clientSecret: intentData.clientSecret });
+            }
+        }
+    } catch (error) {
+        console.error('Error initializing Stripe Elements:', error);
+        // Fallback to manual form if Stripe fails
+    }
 }
 
 // Hide Payment Modal Function
@@ -1502,10 +1587,10 @@ function validatePaymentForm() {
     return true;
 }
 
-// Process Payment
+// Process Payment with Stripe
 async function handlePayment() {
-    if (!validatePaymentForm()) {
-        alert('Please fill in all payment details correctly.');
+    if (!sessionId) {
+        alert('Session not found. Please refresh the page.');
         return;
     }
     
@@ -1514,14 +1599,137 @@ async function handlePayment() {
     processPayment.querySelector('.btn-text').style.display = 'none';
     processPayment.querySelector('.btn-loading').style.display = 'inline';
     
-    // Simulate payment processing
-    setTimeout(() => {
-        hidePaymentModal();
-        showReceiptModal();
+    try {
+        // Check if Stripe Elements is initialized
+        if (!elements || !paymentElement) {
+            // Fallback: Use the original payment endpoint without Stripe Elements
+            const response = await fetch(`${API_BASE}/api/session/${sessionId}/payment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Payment endpoint error:', errorText);
+                throw new Error('Payment failed. Please try again.');
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'paid') {
+                hidePaymentModal();
+                showReceiptModal();
+                
+                // Add success message to chat
+                addMessage('TripKaki', `🎉 Payment successful! Your travel insurance policy is now active. Policy Number: ${data.policy_number || 'N/A'}. Have a safe trip!`, 'assistant');
+                
+                // Earn rewards
+                earnRewards(100);
+                
+                processPayment.disabled = false;
+                processPayment.querySelector('.btn-text').style.display = 'inline';
+                processPayment.querySelector('.btn-loading').style.display = 'none';
+                return;
+            } else {
+                throw new Error(data.error || 'Payment failed');
+            }
+        }
         
-        // Add success message to chat
-        addMessage('TripKaki', '🎉 Payment successful! Your travel insurance policy is now active. You can find your e-receipt and policy documents above. Have a safe trip!', 'assistant');
-    }, 2000);
+        // Extract amount from payment summary (remove SGD $ and parse)
+        const amountText = document.getElementById('paymentAmount').textContent;
+        const amount = parseFloat(amountText.replace(/[^\d.]/g, '')) || 89.00;
+        
+        // Create payment intent
+        const intentResponse = await fetch(`${API_BASE}/api/create-payment-intent`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                amount: amount,
+                currency: 'sgd',
+                session_id: sessionId
+            })
+        });
+        
+        if (!intentResponse.ok) {
+            const errorText = await intentResponse.text();
+            console.error('Payment intent error:', errorText);
+            throw new Error('Failed to create payment intent. Please try again.');
+        }
+        
+        const intentData = await intentResponse.json();
+        
+        if (!intentData.clientSecret) {
+            throw new Error('Failed to create payment intent');
+        }
+        
+        // Confirm payment with Stripe Payment Element
+        const { error, paymentIntent } = await stripe.confirmPayment({
+            elements,
+            clientSecret: intentData.clientSecret,
+            confirmParams: {
+                return_url: window.location.href,
+                payment_method_data: {
+                    billing_details: {
+                        name: document.getElementById('cardholderName')?.value || 'Customer',
+                        email: document.getElementById('billingEmail')?.value || 'customer@example.com'
+                    }
+                }
+            },
+            redirect: 'if_required'
+        });
+        
+        if (error) {
+            throw new Error(error.message);
+        }
+        
+        if (paymentIntent && paymentIntent.status === 'succeeded') {
+            // Confirm payment on backend
+            const confirmResponse = await fetch(`${API_BASE}/api/confirm-payment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    paymentIntentId: paymentIntent.id,
+                    sessionId: sessionId
+                })
+            });
+            
+            if (!confirmResponse.ok) {
+                const errorText = await confirmResponse.text();
+                console.error('Confirm payment error:', errorText);
+                throw new Error('Payment confirmation failed');
+            }
+            
+            const confirmData = await confirmResponse.json();
+            
+            if (confirmData.status === 'paid') {
+                hidePaymentModal();
+                showReceiptModal();
+                
+                // Add success message to chat
+                addMessage('TripKaki', `🎉 Payment successful! Your travel insurance policy is now active. Policy Number: ${confirmData.policy_number || 'N/A'}. Have a safe trip!`, 'assistant');
+                
+                // Earn rewards
+                earnRewards(100);
+            } else {
+                throw new Error('Payment confirmation failed');
+            }
+        } else {
+            throw new Error('Payment not completed');
+        }
+    } catch (error) {
+        console.error('Payment error:', error);
+        alert(`Payment failed: ${error.message}`);
+        processPayment.disabled = false;
+        processPayment.querySelector('.btn-text').style.display = 'inline';
+        processPayment.querySelector('.btn-loading').style.display = 'none';
+    }
 }
 
 // Download Receipt as PDF

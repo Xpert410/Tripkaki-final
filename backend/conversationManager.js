@@ -31,6 +31,7 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         selected_plan: null,
         addons: [],
         conversation_history: [],
+        pending_question: null, // Store questions asked before trip info is collected
         created_at: new Date().toISOString()
       };
     }
@@ -49,6 +50,24 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     /** Extract trip information from user message */
     const messageLower = message.toLowerCase();
     const extracted = {};
+    
+    // Handle "today" and "tomorrow" for departure date - check this FIRST before anything else
+    // This needs to be checked immediately, even before other extractions
+    if (!currentData.departure_date && !currentData.trip_start_date) {
+      const trimmedLower = message.trim().toLowerCase();
+      // Check for "today" - exact match or word boundary
+      if (trimmedLower === 'today' || /\btoday\b/i.test(message)) {
+        extracted.departure_date = this._getDateString(0); // Today
+        extracted.trip_start_date = extracted.departure_date;
+        console.log(`[Date Extraction] Found "today" in "${message}" → ${extracted.departure_date}`);
+      } 
+      // Check for "tomorrow" - exact match or word boundary
+      else if (trimmedLower === 'tomorrow' || /\btomorrow\b/i.test(message)) {
+        extracted.departure_date = this._getDateString(1); // Tomorrow
+        extracted.trip_start_date = extracted.departure_date;
+        console.log(`[Date Extraction] Found "tomorrow" in "${message}" → ${extracted.departure_date}`);
+      }
+    }
     
     // Name extraction (if not already captured)
     // Be more flexible - try to catch standalone names or common phrases
@@ -80,15 +99,15 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
       }
     }
     
-    // Destination (country/city)
-    if (!currentData.destination) {
+    // Destination (country/city) - but skip if user is asking a question
+    if (!currentData.destination && !messageLower.includes('want to ask') && !messageLower.includes('have a question')) {
       const destinationPatterns = [
         /(?:going to|traveling to|visiting|destination is|trip to)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
         /(?:to|in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i
       ];
       for (const pattern of destinationPatterns) {
         const match = message.match(pattern);
-        if (match) {
+        if (match && match[1].toLowerCase() !== 'ask') {
           extracted.destination = match[1];
           break;
         }
@@ -150,6 +169,39 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
           // Have return, missing departure - treat as departure
           extracted.departure_date = dateValue;
           extracted.trip_start_date = dateValue;
+        }
+      }
+    }
+    
+    // Extract trip duration (e.g., "5 days", "1 week", "2 weeks")
+    if (!currentData.trip_duration && !currentData.return_date && !currentData.trip_end_date) {
+      const durationPatterns = [
+        /(\d+)\s*(?:day|days)/i,
+        /(\d+)\s*(?:week|weeks)/i,
+        /(\d+)\s*(?:night|nights)/i,
+        /for\s+(\d+)\s*(?:day|days|week|weeks)/i,
+        /duration.*?(\d+)\s*(?:day|days|week|weeks)/i
+      ];
+      
+      for (const pattern of durationPatterns) {
+        const match = message.match(pattern);
+        if (match) {
+          const number = parseInt(match[1]);
+          const unit = message.toLowerCase().match(/\b(?:week|weeks)\b/) ? 'weeks' : 'days';
+          
+          if (unit === 'weeks') {
+            extracted.trip_duration = number * 7; // Convert weeks to days
+          } else {
+            extracted.trip_duration = number;
+          }
+          
+          // If we have departure date, calculate return date
+          const departureDate = extracted.departure_date || currentData.departure_date || currentData.trip_start_date;
+          if (departureDate && extracted.trip_duration) {
+            extracted.return_date = this._calculateReturnDate(departureDate, extracted.trip_duration);
+            extracted.trip_end_date = extracted.return_date;
+          }
+          break;
         }
       }
     }
@@ -277,6 +329,11 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
       extracted.trip_style = 'adventure';
     }
     
+    // Debug: Log final extracted object
+    if (Object.keys(extracted).length > 0) {
+      console.log(`[ExtractTripInfo] Final extracted object:`, extracted);
+    }
+    
     return extracted;
   }
   
@@ -297,6 +354,33 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     }
     return null;
   }
+  
+  _getDateString(daysOffset) {
+    /** Get date string in YYYY-MM-DD format, offset by days (0 = today, 1 = tomorrow) */
+    const date = new Date();
+    date.setDate(date.getDate() + daysOffset);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
+  _calculateReturnDate(departureDate, durationDays) {
+    /** Calculate return date from departure date and duration */
+    try {
+      const departure = new Date(departureDate);
+      if (isNaN(departure.getTime())) {
+        return null;
+      }
+      departure.setDate(departure.getDate() + durationDays);
+      const year = departure.getFullYear();
+      const month = String(departure.getMonth() + 1).padStart(2, '0');
+      const day = String(departure.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      return null;
+    }
+  }
 
   isTripDataComplete(tripData) {
     /** Check if we have essential trip information - using both new and legacy fields */
@@ -304,6 +388,17 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     const hasReturnDate = tripData.return_date || tripData.trip_end_date;
     const hasDestination = tripData.arrival_country || tripData.destination;
     const hasTravellers = tripData.number_of_adults || tripData.number_of_children || tripData.number_of_travellers;
+    
+    // If we have departure date and trip duration, calculate return date
+    if (hasDate && !hasReturnDate && tripData.trip_duration) {
+      const departureDate = tripData.departure_date || tripData.trip_start_date;
+      const returnDate = this._calculateReturnDate(departureDate, tripData.trip_duration);
+      if (returnDate) {
+        tripData.return_date = returnDate;
+        tripData.trip_end_date = returnDate;
+        return hasDate && hasDestination && hasTravellers;
+      }
+    }
     
     return hasDate && hasReturnDate && hasDestination && hasTravellers;
   }
@@ -316,7 +411,19 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     if (!tripData.age) missing.push('age');
     if (!tripData.trip_type) missing.push('trip_type');
     if (!tripData.departure_date && !tripData.trip_start_date) missing.push('departure_date');
-    if (!tripData.return_date && !tripData.trip_end_date) missing.push('return_date');
+    
+    // Check for return date or trip duration
+    const hasReturnDate = tripData.return_date || tripData.trip_end_date;
+    const hasTripDuration = tripData.trip_duration;
+    const hasDepartureDate = tripData.departure_date || tripData.trip_start_date;
+    
+    // If we have departure date but no return date and no trip duration, ask for duration
+    if (hasDepartureDate && !hasReturnDate && !hasTripDuration) {
+      missing.push('trip_duration');
+    } else if (!hasReturnDate && !hasTripDuration) {
+      missing.push('return_date');
+    }
+    
     if (!tripData.departure_country) missing.push('departure_country');
     if (!tripData.arrival_country && !tripData.destination) missing.push('arrival_country');
     if (!tripData.number_of_adults && !tripData.number_of_travellers) missing.push('number_of_adults');
@@ -336,19 +443,50 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     
     // Extract trip info
     const extracted = this.extractTripInfo(message, tripData);
+    console.log(`[Extraction] Extracted from message "${message}":`, extracted);
     
     // If regex extraction didn't find anything and we're in trip_intake, use AI fallback
+    // But preserve any values we already extracted (like "today" or "tomorrow")
     if (step === 'trip_intake' && Object.keys(extracted).length === 0) {
       const missingFields = this.getMissingFields(tripData);
       if (missingFields.length > 0) {
         const aiExtracted = await this._extractWithAI(message, missingFields, groqService);
         if (aiExtracted) {
-          Object.assign(extracted, aiExtracted);
+          // Only assign non-empty values to avoid overwriting with empty strings
+          for (const [key, value] of Object.entries(aiExtracted)) {
+            if (value !== null && value !== undefined && value !== '') {
+              extracted[key] = value;
+            }
+          }
         }
       }
     }
     
-    Object.assign(tripData, extracted);
+    // Merge extracted data, but don't overwrite existing non-empty values with empty ones
+    for (const [key, value] of Object.entries(extracted)) {
+      if (value !== null && value !== undefined && value !== '') {
+        tripData[key] = value;
+        console.log(`[TripData Update] Set ${key} = ${value}`);
+      }
+    }
+    
+    // If we have departure date and trip duration, calculate return date
+    if (tripData.departure_date && tripData.trip_duration && !tripData.return_date) {
+      const returnDate = this._calculateReturnDate(tripData.departure_date, tripData.trip_duration);
+      if (returnDate) {
+        tripData.return_date = returnDate;
+        tripData.trip_end_date = returnDate;
+      }
+    }
+    // Also check legacy trip_start_date
+    if (tripData.trip_start_date && tripData.trip_duration && !tripData.return_date && !tripData.trip_end_date) {
+      const returnDate = this._calculateReturnDate(tripData.trip_start_date, tripData.trip_duration);
+      if (returnDate) {
+        tripData.return_date = returnDate;
+        tripData.trip_end_date = returnDate;
+      }
+    }
+    
     session.trip_data = tripData;
     
     let responseText = '';
@@ -356,23 +494,84 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     let requiresAction = null;
     let data = null;
     
-    // Check if user is asking a question BEFORE processing steps
-    // Only check for FAQs if we're past trip intake
-    const isQuestion = step !== 'trip_intake' && (
+    // Check if user wants to ask a question during trip intake
+    const messageLower = message.toLowerCase();
+    const wantsToAskQuestion = messageLower.includes('want to ask') || 
+                                  messageLower.includes('i have a question') ||
+                                  messageLower.includes('can i ask') ||
+                                  messageLower.includes('i want to ask a question');
+    
+    // If user wants to ask a question during trip intake, store it and ask for info first
+    if (step === 'trip_intake' && wantsToAskQuestion && !this.isTripDataComplete(tripData)) {
+      // Extract the actual question if it's in the same message
+      const questionMatch = message.match(/(?:want to ask|have a question|can i ask|want to ask a question)[\s:,]*[^\w]*(.+)/i);
+      if (questionMatch && questionMatch[1].trim().length > 5) {
+        // If there's actual question content, extract it
+        const questionText = questionMatch[1].trim();
+        // Check if it ends with a question mark or contains question words
+        if (questionText.includes('?') || /\b(what|how|when|where|why|can|will|is|does)\b/i.test(questionText)) {
+          session.pending_question = questionText.replace(/[.!]$/, ''); // Remove trailing period/exclamation, keep question mark
+        } else {
+          session.pending_question = 'general_question';
+        }
+      } else {
+        // Just store that they want to ask something
+        session.pending_question = 'general_question';
+      }
+      
+      responseText = "Okay okay, before I answer your question, I need to collect certain information from you first ah. Let me get your trip details first, then I'll answer your question properly.";
+      
+      conversationHistory.push({ role: 'assistant', content: responseText });
+      session.conversation_history = conversationHistory;
+      this.updateSession(sessionId, session);
+      
+      return {
+        session_id: sessionId,
+        response: responseText,
+        step: nextStep,
+        data: data,
+        requires_action: requiresAction
+      };
+    }
+    
+    // Check if user is providing a question while we have a pending_question stored
+    if (step === 'trip_intake' && session.pending_question === 'general_question' && 
+        !this.isTripDataComplete(tripData) && 
+        (message.includes('?') || /\b(what|how|when|where|why|can|will|is|does)\b/i.test(messageLower))) {
+      // User is providing the actual question now
+      session.pending_question = message;
+      const missing = this._getMissingInfo(tripData);
+      responseText = `Got your question ah. I'll answer it once I collect all your trip info. ${missing}`;
+      
+      conversationHistory.push({ role: 'assistant', content: responseText });
+      session.conversation_history = conversationHistory;
+      this.updateSession(sessionId, session);
+      
+      return {
+        session_id: sessionId,
+        response: responseText,
+        step: nextStep,
+        data: data,
+        requires_action: requiresAction
+      };
+    }
+    
+    // Check if user is asking a question (after trip intake or during trip intake if trip data is complete)
+    const isQuestion = (step !== 'trip_intake' || this.isTripDataComplete(tripData)) && (
                       message.includes('?') || 
-                      /\bwhat\b/.test(message.toLowerCase()) || 
-                      /\bhow\b/.test(message.toLowerCase()) || 
-                      /\bwhen\b/.test(message.toLowerCase()) || 
-                      /\bwhere\b/.test(message.toLowerCase()) || 
-                      /\bwhy\b/.test(message.toLowerCase()) ||
-                      message.toLowerCase().includes('do you') ||
-                      message.toLowerCase().includes('can you') ||
-                      message.toLowerCase().includes('explain') ||
-                      message.toLowerCase().includes('tell me') ||
-                      message.toLowerCase().includes('what about') ||
-                      message.toLowerCase().includes('is it') ||
-                      message.toLowerCase().includes('will it') ||
-                      message.toLowerCase().includes('does this'));
+                      /\bwhat\b/.test(messageLower) || 
+                      /\bhow\b/.test(messageLower) || 
+                      /\bwhen\b/.test(messageLower) || 
+                      /\bwhere\b/.test(messageLower) || 
+                      /\bwhy\b/.test(messageLower) ||
+                      messageLower.includes('do you') ||
+                      messageLower.includes('can you') ||
+                      messageLower.includes('explain') ||
+                      messageLower.includes('tell me') ||
+                      messageLower.includes('what about') ||
+                      messageLower.includes('is it') ||
+                      messageLower.includes('will it') ||
+                      messageLower.includes('does this'));
     
     // If it's a question and we're past trip intake, handle as FAQ
     if (isQuestion) {
@@ -396,11 +595,41 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
     if (step === 'trip_intake') {
       if (this.isTripDataComplete(tripData)) {
         const summary = this._summarizeTrip(tripData);
-        responseText = `Perfect. So that's ${summary} — correct?`;
+        // Vary the confirmation message naturally
+        const confirmations = [
+          `Okay okay, so that's ${summary} — correct ah?`,
+          `Hmm, let me check... ${summary} — that right?`,
+          `Okay so ${summary} — sounds right to you?`,
+          `Alright, so ${summary} — confirm ah?`
+        ];
+        responseText = confirmations[Math.floor(Math.random() * confirmations.length)];
+        
+        // If there's a pending question, mention we'll answer it after confirmation
+        if (session.pending_question && session.pending_question !== 'general_question') {
+          responseText += ` Once you confirm, I'll answer your question ah.`;
+        } else if (session.pending_question === 'general_question') {
+          responseText += ` Once you confirm, I'll answer your question lah.`;
+        }
+        
         nextStep = 'persona_classification';
       } else {
         const missing = this._getMissingInfo(tripData);
-        responseText = `Got it. ${missing}`;
+        const acknowledgements = [
+          `Got it lah. ${missing}`,
+          `Okay okay. ${missing}`,
+          `Sure sure. ${missing}`,
+          `Alright. ${missing}`
+        ];
+        responseText = acknowledgements[Math.floor(Math.random() * acknowledgements.length)];
+        
+        // Also check if user is providing a question in the current message
+        if (wantsToAskQuestion && !session.pending_question) {
+          const questionMatch = message.match(/(?:want to ask|have a question|can i ask)[\s:,]*[^\w]*([^.!?]+\?)/i);
+          if (questionMatch) {
+            session.pending_question = questionMatch[1].trim();
+            responseText += ` Got your question, I'll answer it after I get all your trip info ah.`;
+          }
+        }
       }
     }
     
@@ -411,18 +640,64 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
         session.persona = persona;
         
         const personaMessages = {
-          'Chill Voyager': "This sounds like a Chill Voyager trip — relaxed, low-risk, and you want peace of mind without the fuss.",
-          'Adventurous Explorer': "This sounds like an Adventurous Explorer trip — outdoors, active, and where you can't afford a medical emergency in the mountains.",
-          'Family Guardian': "This sounds like a Family Guardian trip — keeping your loved ones safe is the priority, and medical coverage can't be compromised.",
-          'Business Nomad': "This sounds like a Business Nomad trip — tight schedules, work commitments, and delays just can't happen.",
-          'Romantic Escaper': "This sounds like a Romantic Escaper trip — couple time, honeymoon vibes, and you want flexibility if plans change.",
-          'Cultural Explorer': "This sounds like a Cultural Explorer trip — multiple cities, longer stays, and luggage protection matters."
+          'Chill Voyager': [
+            "Wah, sounds like a Chill Voyager trip leh — relaxed, low-risk, and you just want peace of mind without the fuss.",
+            "Oh, this one's a Chill Voyager trip ah — relaxed vibes, low-risk, just want to chill without worrying.",
+            "Hmm, Chill Voyager trip I think — you want to relax and not stress about things lah."
+          ],
+          'Adventurous Explorer': [
+            "This one sounds like an Adventurous Explorer trip — outdoors, active, and you definitely don't want medical emergency in the mountains ah.",
+            "Oh wow, Adventurous Explorer trip! Outdoors stuff, active... definitely need good coverage for this kind of trip.",
+            "Adventurous Explorer lah this one — hiking, outdoor activities, better make sure you're covered properly."
+          ],
+          'Family Guardian': [
+            "Ah, Family Guardian trip — keeping your loved ones safe is the priority, and medical coverage can't be compromised.",
+            "Family Guardian trip I see — when you traveling with family, safety is everything ah.",
+            "Oh, you're bringing family! Family Guardian trip — definitely want to make sure everyone's protected."
+          ],
+          'Business Nomad': [
+            "Business Nomad trip lah — tight schedules, work commitments, and delays just cannot happen one.",
+            "Business trip ah? Business Nomad — you need coverage for delays and work stuff, right?",
+            "Hmm, Business Nomad trip — tight schedules, can't afford delays one lah."
+          ],
+          'Romantic Escaper': [
+            "Sounds like a Romantic Escaper trip — couple time, honeymoon vibes, and you want flexibility if plans change.",
+            "Oh, Romantic Escaper trip! Couple getaway ah — want flexibility in case plans change, right?",
+            "Romantic trip leh — couple time, want to make sure you got coverage for changes lah."
+          ],
+          'Cultural Explorer': [
+            "Cultural Explorer trip leh — multiple cities, longer stays, and luggage protection matters.",
+            "Cultural Explorer trip ah — going to a few places, staying longer... definitely need luggage coverage.",
+            "Oh, Cultural Explorer trip — multiple cities, longer stay, better make sure luggage is covered."
+          ]
         };
         
-        responseText = personaMessages[persona] || "Let me find the right plan for your trip.";
+        const personaOptions = personaMessages[persona] || ["Let me find the right plan for your trip."];
+        responseText = personaOptions[Math.floor(Math.random() * personaOptions.length)];
+        
+        // If there's a pending question, answer it now
+        if (session.pending_question) {
+          const questionToAnswer = session.pending_question === 'general_question' ? 
+            'What questions do you have about travel insurance?' : 
+            session.pending_question;
+          
+          // Answer the pending question using Groq
+          const questionAnswer = await this._handleFAQ(questionToAnswer, tripData, session, groqService, policyDatabase);
+          
+          responseText += `\n\n${questionAnswer}`;
+          
+          // Clear pending question
+          session.pending_question = null;
+        }
+        
         nextStep = 'plan_recommendation';
       } else {
-        responseText = "No worries, let me update that. What needs changing?";
+        const updateResponses = [
+          "No worries lah, let me update that. What needs changing ah?",
+          "Okay okay, can change one. What you want to update?",
+          "Sure sure, can fix. What's wrong?"
+        ];
+        responseText = updateResponses[Math.floor(Math.random() * updateResponses.length)];
       }
     }
     
@@ -573,77 +848,175 @@ Use phrases like "Can check for you", "No problem lah", "Actually quite good", "
   }
   
   async _handleFAQ(question, tripData, session, groqService, policyDatabase) {
-    /** Handle FAQ questions about insurance policies */
+    /** Handle FAQ questions using Intelligent Query Classification System */
     try {
-      // Get policy context from database
-      let policyContext = {};
-      if (policyDatabase) {
-        const db = policyDatabase.loadDatabase();
-        if (db.layers) {
-          // Get selected plan's data
-          const selectedPlan = session.selected_plan || session.recommended_plans?.[0];
-          if (selectedPlan && db.layers.layer_2_benefits) {
-            policyContext = {
-              selected_plan: selectedPlan.name,
-              trip_info: {
-                destination: tripData.arrival_country || tripData.destination,
-                duration: selectedPlan.duration || 7,
-                travelers: selectedPlan.travelers || 1
-              },
-              available_benefits: db.layers.layer_2_benefits.slice(0, 10).map(benefit => ({
-                name: benefit.benefit_name,
-                description: benefit.original_text || ''
-              }))
-            };
-          }
-        }
-      }
+      // Import QueryClassifier dynamically
+      const { QueryClassifier } = await import('./services/queryClassifier.js');
+      const queryClassifier = new QueryClassifier();
       
-      // Build FAQ context
-      const context = {
-        user_trip: tripData,
-        selected_policy: session.selected_plan?.name || 'Travel insurance',
-        policy_context: policyContext
-      };
+      // Process query through classification system
+      const queryResult = await queryClassifier.processQuery(question, policyDatabase, tripData);
       
-      // Use Groq to answer the question
-      const selectedPlan = session.selected_plan || session.recommended_plans?.[0];
-      const planName = selectedPlan?.name || 'travel insurance';
+      // Format response based on query type
+      let responseText = this._formatQueryResponse(queryResult, groqService);
       
-      const prompt = `You are TripKaki, a friendly Singaporean travel insurance assistant. Answer this question about travel insurance.
-
-Selected Policy: ${planName}
-
-${Object.keys(policyContext).length > 0 ? `Policy Details: ${JSON.stringify(policyContext)}` : 'Note: Policy details are still being collected.'}
-
-${Object.keys(tripData).length > 0 ? `User's Trip: ${JSON.stringify(tripData)}` : 'Note: User trip details are still being collected.'}
+      return responseText;
+    } catch (error) {
+      console.error('Error handling FAQ:', error);
+      // Fallback to simple Groq response
+      try {
+        const prompt = `You are TripKaki, a friendly Singaporean travel insurance assistant. Answer this question about travel insurance naturally.
 
 Question: ${question}
 
-Provide a helpful, conversational answer. Sound like a friendly Singaporean: short sentences, calm, use some Singlish naturally like "lah", "leh", "ah" (but don't overdo it). 
+Answer naturally with light Singlish ("lah", "leh", "ah"). Keep it short and helpful.`;
 
-IMPORTANT: If the user is asking about coverage or benefits, use the policy information provided. If they're asking about what's covered but we don't have policy details yet, politely explain that you're still gathering their trip info first, then you'll be able to answer their specific questions about coverage.`;
-
-      const completion = await groqService.client.chat.completions.create({
-        model: groqService.model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are TripKaki, a friendly Singaporean travel insurance assistant. Answer questions about travel insurance policies in a conversational, helpful way. Be empathetic and natural.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7
-      });
-      
-      return completion.choices[0].message.content;
-    } catch (error) {
-      console.error('Error handling FAQ:', error);
-      return "Sorry, I'm having trouble answering that right now. Could you try rephrasing your question?";
+        const completion = await groqService.client.chat.completions.create({
+          model: groqService.model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are TripKaki, a real Singaporean friend helping with travel insurance. Be natural, use Singlish lightly, vary responses.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.9
+        });
+        
+        return completion.choices[0].message.content;
+      } catch (fallbackError) {
+        return "Sorry leh, having some trouble answering that right now. Can try rephrasing your question anot?";
+      }
     }
+  }
+
+  _formatQueryResponse(queryResult, groqService) {
+    /** Format structured query results into natural language responses */
+    if (queryResult.error) {
+      return queryResult.message || "Sorry leh, having some trouble with that. Can try again?";
+    }
+
+    let response = '';
+
+    switch (queryResult.query_type) {
+      case 'comparison':
+        if (queryResult.matrix && Array.isArray(queryResult.matrix)) {
+          response = `Here's the comparison for you:\n\n`;
+          
+          // Format matrix as table
+          if (queryResult.plans_compared) {
+            response += `Comparing: ${queryResult.plans_compared.join(', ')}\n\n`;
+          }
+          
+          // Build table from matrix
+          queryResult.matrix.slice(0, 5).forEach(row => {
+            const benefit = row.Benefit || row.benefit || '';
+            const values = Object.keys(row)
+              .filter(k => k !== 'Benefit' && k !== 'benefit')
+              .map(k => `${k}: ${row[k]}`)
+              .join(', ');
+            response += `• ${benefit}: ${values}\n`;
+          });
+          
+          if (queryResult.summary) {
+            response += `\n${queryResult.summary}`;
+          }
+          if (queryResult.recommendation) {
+            response += `\n\n${queryResult.recommendation}`;
+          }
+        } else {
+          response = queryResult.message || "Let me get the comparison for you.";
+        }
+        break;
+
+      case 'explanation':
+        if (queryResult.explanation) {
+          response = queryResult.explanation;
+          if (queryResult.reference_text) {
+            response += `\n\nReference: ${queryResult.reference_text}`;
+          }
+          if (queryResult.coverage_details) {
+            const details = queryResult.coverage_details;
+            if (details.limit) {
+              response += `\n\nCoverage Limit: ${details.limit}`;
+            }
+            if (details.exclusions && details.exclusions.length > 0) {
+              response += `\n\nExclusions: ${details.exclusions.join(', ')}`;
+            }
+          }
+        } else {
+          response = queryResult.message || "Let me explain that for you.";
+        }
+        break;
+
+      case 'eligibility':
+        const isCovered = queryResult.is_covered;
+        const coveredText = isCovered ? 'Yes, covered lah!' : 'Hmm, not covered for that one ah.';
+        response = `${coveredText}\n\n`;
+        
+        if (queryResult.reason) {
+          response += `${queryResult.reason}\n\n`;
+        }
+        if (queryResult.requirements && queryResult.requirements.length > 0) {
+          response += `Requirements: ${queryResult.requirements.join(', ')}\n\n`;
+        }
+        if (queryResult.exclusions && queryResult.exclusions.length > 0) {
+          response += `Exclusions: ${queryResult.exclusions.join(', ')}\n\n`;
+        }
+        if (queryResult.advice) {
+          response += `${queryResult.advice}`;
+        }
+        break;
+
+      case 'scenario':
+        if (queryResult.coverage_steps && Array.isArray(queryResult.coverage_steps)) {
+          response = `For that scenario:\n\n`;
+          queryResult.coverage_steps.forEach((step, index) => {
+            response += `${index + 1}. ${step}\n`;
+          });
+          
+          if (queryResult.coverage_status) {
+            response += `\nCoverage Status: ${queryResult.coverage_status}\n`;
+          }
+          
+          if (queryResult.claim_guidance) {
+            response += `\n${queryResult.claim_guidance}`;
+          }
+        } else {
+          response = queryResult.message || "Let me analyze that scenario for you.";
+        }
+        break;
+
+      default:
+        response = queryResult.message || "Let me help you with that.";
+    }
+
+    // Add natural Singaporean tone to the response
+    response = this._humanizeResponse(response);
+
+    return response;
+  }
+
+  _humanizeResponse(response) {
+    /** Add natural Singaporean conversational touches to structured responses */
+    // Don't modify if it already sounds natural
+    if (response.includes('lah') || response.includes('leh') || response.includes('ah')) {
+      return response;
+    }
+
+    // Add light Singlish touches at the end
+    const endings = [
+      ' Hope that helps lah!',
+      ' Let me know if you need more info ah.',
+      ' Got any other questions anot?',
+      ' Anything else you want to know?'
+    ];
+    
+    const randomEnding = endings[Math.floor(Math.random() * endings.length)];
+    return response + randomEnding;
   }
 
   _summarizeTrip(tripData) {
@@ -673,24 +1046,25 @@ IMPORTANT: If the user is asking about coverage or benefits, use the policy info
     const missingFields = this.getMissingFields(tripData);
     
     if (missingFields.length === 0) {
-      return "What else should I know about your trip?";
+      return "What else should I know about your trip ah?";
     }
     
     // Map field names to natural prompts - ask one at a time
     const fieldPrompts = {
-      'name': "What's your name?",
-      'age': "How old are you?",
+      'name': "What's your name ah?",
+      'age': "How old are you leh?",
       'trip_type': "Is this a round trip or single trip?",
-      'departure_date': "What's your departure date?",
+      'departure_date': "What's your departure date ah? You can say 'today', 'tomorrow', or give me a date.",
+      'trip_duration': "How many days is your trip ah?",
       'return_date': "What's your return date?",
-      'departure_country': "Which country are you leaving from?",
-      'arrival_country': "Which country are you traveling to?",
-      'number_of_adults': "How many adults are traveling?"
+      'departure_country': "Which country you leaving from ah?",
+      'arrival_country': "Which country you traveling to?",
+      'number_of_adults': "How many adults traveling leh?"
     };
     
     // Return only the first missing field
     const firstMissingField = missingFields[0];
-    return fieldPrompts[firstMissingField] || "What else should I know about your trip?";
+    return fieldPrompts[firstMissingField] || "What else should I know about your trip ah?";
   }
 
   _generateBindSummary(tripData) {
@@ -753,17 +1127,28 @@ IMPORTANT: If the user is asking about coverage or benefits, use the policy info
       'trip_type': 'either "RT" for round trip or "ST" for single trip'
     };
     
-    const prompt = `Extract the ${fieldDescriptions[firstMissing]} from the following user message. Return ONLY a JSON object with the field name and value. If the field is not found or unclear, return an empty JSON object {}.
+    // Special handling for departure_date to recognize "today" and "tomorrow"
+    let fieldDesc = fieldDescriptions[firstMissing];
+    let examples = `Example for name: {"name": "John Doe"}
+Example for age: {"age": 35}
+Example for departure_date: {"departure_date": "2024-12-12"}
+Example for departure_country: {"departure_country": "Singapore"}`;
+    
+    if (firstMissing === 'departure_date') {
+      fieldDesc = 'departure date in YYYY-MM-DD format. If user says "today", return today\'s date. If user says "tomorrow", return tomorrow\'s date.';
+      examples = `Example for departure_date (today): {"departure_date": "${this._getDateString(0)}"}
+Example for departure_date (tomorrow): {"departure_date": "${this._getDateString(1)}"}
+Example for departure_date (specific date): {"departure_date": "2024-12-12"}`;
+    }
+    
+    const prompt = `Extract the ${fieldDesc} from the following user message. Return ONLY a JSON object with the field name and value. If the field is not found or unclear, return an empty JSON object {}.
 
 Field name: ${firstMissing}
 User message: "${message}"
 
 Return JSON format: {"${firstMissing}": "extracted_value"}
 
-Example for name: {"name": "John Doe"}
-Example for age: {"age": 35}
-Example for departure_date: {"departure_date": "2024-12-12"}
-Example for departure_country: {"departure_country": "Singapore"}`;
+${examples}`;
 
     try {
       const response = await groqService.client.chat.completions.create({
