@@ -3,6 +3,12 @@ const API_BASE = '';
 let sessionId = null;
 let walletBalance = 0;
 let isCrisisMode = false;
+// Stripe variables (initialized at runtime)
+let stripe = null;
+let elements = null;
+let cardElement = null;
+let last4FromPayment = '';
+let lastTransactionId = '';
 
 // DOM Elements
 const messagesContainer = document.getElementById('messages');
@@ -138,6 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load saved voice
     const savedVoice = localStorage.getItem('tripkaki_voice') || 'singaporean';
     selectVoice(savedVoice);
+    
+    // Initialize Stripe with publishable key (test key provided for hackathon)
+    try {
+        stripe = Stripe('pk_test_51SOou8KIVh1pb6k1as4zm0jmLTarZHL6avr2reNRK4BbSSV7Ot8nlSKxfcPIxdvBxtBnHfGjkhODlcWmbJyUOPvK00cE3PmZ2X');
+        elements = stripe.elements();
+    } catch (e) {
+        console.warn('Stripe initialization failed:', e);
+    }
     
     // Voice Review handlers
     const voiceReviewBtn = document.getElementById('voiceReviewBtn');
@@ -729,37 +743,7 @@ async function handleConfirm() {
     }
 }
 
-async function handlePayment() {
-    if (!sessionId) return;
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/session/${sessionId}/payment`, {
-            method: 'POST'
-        });
-        
-        const data = await response.json();
-        hideActionButtons();
-        updateAvatarStatus('Coverage Active');
-        
-        if (data.status === 'paid') {
-            messageInput.value = "payment complete";
-            await sendMessage();
-            
-            if (data.policy_number) {
-                setTimeout(() => {
-                    addMessage(`Policy Number: ${data.policy_number}`, 'assistant');
-                }, 500);
-            }
-            
-            // Earn rewards
-            earnRewards(100);
-        }
-        
-    } catch (error) {
-        console.error('Error processing payment:', error);
-        addMessage('Payment processing failed. Please try again.', 'assistant');
-    }
-}
+
 
 // File Upload
 async function handleFileUpload(event) {
@@ -1390,11 +1374,10 @@ const downloadReceipt = document.getElementById('downloadReceipt');
 const emailReceipt = document.getElementById('emailReceipt');
 
 // Payment Form Elements
-const cardNumber = document.getElementById('cardNumber');
-const expiryDate = document.getElementById('expiryDate');
-const cvv = document.getElementById('cvv');
+// Note: Card details are handled by Stripe Elements (cardElement). Keep cardholder name and email inputs.
 const cardholderName = document.getElementById('cardholderName');
 const billingEmail = document.getElementById('billingEmail');
+const billingPostal = document.getElementById('billingPostal');
 
 // Payment Data
 let currentPaymentData = {
@@ -1423,6 +1406,24 @@ function showPaymentModal(paymentData = null) {
     
     paymentModalOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+
+    // Mount Stripe Card Element immediately so the form shows card input when the modal opens
+    try {
+        if (stripe && elements && !cardElement) {
+            cardElement = elements.create('card', { hidePostalCode: true });
+            cardElement.mount('#card-element');
+            cardElement.on('change', (event) => {
+                const cardErrors = document.getElementById('card-errors');
+                if (cardErrors) cardErrors.textContent = event.error ? event.error.message : '';
+            });
+            // focus into the card input for quick entry
+            setTimeout(() => {
+                try { cardElement.focus(); } catch (e) { /* ignore */ }
+            }, 200);
+        }
+    } catch (e) {
+        console.warn('Failed to mount Stripe card element:', e);
+    }
 }
 
 // Hide Payment Modal Function
@@ -1441,8 +1442,8 @@ function hidePaymentModal() {
 function showReceiptModal() {
     const now = new Date();
     const receiptNumber = Math.floor(Math.random() * 900000) + 100000;
-    const policyNumber = `MSIG-${currentPaymentData.destination.substring(0,2).toUpperCase()}-${receiptNumber}`;
-    const transactionId = `TXN-${receiptNumber}-${Math.floor(Math.random() * 1000)}`;
+    const policyNumber = currentPaymentData.policy_number || `MSIG-${currentPaymentData.destination.substring(0,2).toUpperCase()}-${receiptNumber}`;
+    const transactionId = lastTransactionId || `TXN-${receiptNumber}-${Math.floor(Math.random() * 1000)}`;
     
     // Update receipt details
     document.getElementById('receiptNumber').textContent = receiptNumber;
@@ -1454,10 +1455,8 @@ function showReceiptModal() {
     document.getElementById('receiptTransactionId').textContent = transactionId;
     document.getElementById('receiptEmail').textContent = billingEmail.value;
     
-    // Update card details (last 4 digits)
-    const cardNum = cardNumber.value.replace(/\s/g, '');
-    const last4 = cardNum.slice(-4);
-    document.getElementById('receiptCardLast4').textContent = last4;
+    // Update card details (last 4 digits) from Stripe result
+    document.getElementById('receiptCardLast4').textContent = last4FromPayment || '0000';
     
     receiptModalOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -1487,41 +1486,133 @@ function formatExpiryDate(input) {
 
 // Validate Payment Form
 function validatePaymentForm() {
-    const cardNum = cardNumber.value.replace(/\s/g, '');
-    const expiry = expiryDate.value;
-    const cvvValue = cvv.value;
+    // With Stripe Elements we only validate presence of billing details here.
     const name = cardholderName.value.trim();
     const email = billingEmail.value.trim();
-    
-    if (cardNum.length < 13 || cardNum.length > 19) return false;
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) return false;
-    if (cvvValue.length < 3 || cvvValue.length > 4) return false;
     if (name.length < 2) return false;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
-    
     return true;
 }
 
-// Process Payment
+// Process Payment (Stripe Elements flow)
 async function handlePayment() {
-    if (!validatePaymentForm()) {
-        alert('Please fill in all payment details correctly.');
+    // Requires Stripe initialized
+    if (!stripe || !elements) {
+        alert('Payment system is not initialized. Please try again later.');
         return;
     }
-    
-    // Show loading state
+
+    const name = cardholderName.value.trim();
+    const email = billingEmail.value.trim();
+    if (!name || !email) {
+        alert('Please provide cardholder name and billing email.');
+        return;
+    }
+
     processPayment.disabled = true;
     processPayment.querySelector('.btn-text').style.display = 'none';
     processPayment.querySelector('.btn-loading').style.display = 'inline';
-    
-    // Simulate payment processing
-    setTimeout(() => {
+
+    // Create or mount Card Element
+    if (!cardElement) {
+        cardElement = elements.create('card');
+        cardElement.mount('#card-element');
+    }
+
+    // Compute amount in cents from currentPaymentData.amount (e.g. "SGD $89.00")
+    const amountMatch = (currentPaymentData.amount || '').match(/([0-9]+(?:\.[0-9]{1,2})?)/);
+    const amountValue = amountMatch ? Math.round(parseFloat(amountMatch[1]) * 100) : 0;
+    if (amountValue <= 0) {
+        alert('Invalid payment amount.');
+        processPayment.disabled = false;
+        processPayment.querySelector('.btn-text').style.display = 'inline';
+        processPayment.querySelector('.btn-loading').style.display = 'none';
+        return;
+    }
+
+    try {
+        // Create PaymentIntent on the server
+        const intentResp = await fetch(`${API_BASE}/api/create-payment-intent`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amountValue, currency: 'sgd', receipt_email: email, session_id: sessionId })
+        });
+
+        const intentData = await intentResp.json();
+        if (!intentResp.ok) {
+            throw new Error(intentData.error || 'Failed to create payment intent');
+        }
+
+        const clientSecret = intentData.clientSecret;
+
+        // Confirm card payment using Elements
+        const billingDetails = { name, email };
+        if (billingPostal && billingPostal.value) {
+            billingDetails.address = { postal_code: billingPostal.value.trim() };
+        }
+
+        const confirmResult = await stripe.confirmCardPayment(clientSecret, {
+            payment_method: {
+                card: cardElement,
+                billing_details: billingDetails
+            }
+        });
+
+        if (confirmResult.error) {
+            // Show error to customer
+            const cardErrors = document.getElementById('card-errors');
+            cardErrors.textContent = confirmResult.error.message || 'Payment confirmation failed';
+            processPayment.disabled = false;
+            processPayment.querySelector('.btn-text').style.display = 'inline';
+            processPayment.querySelector('.btn-loading').style.display = 'none';
+            return;
+        }
+
+        const paymentIntent = confirmResult.paymentIntent;
+        if (paymentIntent.status !== 'succeeded') {
+            throw new Error('Payment did not succeed. Status: ' + paymentIntent.status);
+        }
+
+        // Finalize purchase on backend (existing endpoint will verify the PaymentIntent)
+        const finalizeResp = await fetch(`${API_BASE}/api/session/${sessionId}/payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_details: { stripePaymentIntentId: paymentIntent.id } })
+        });
+
+        const finalizeData = await finalizeResp.json();
+        if (!finalizeResp.ok) {
+            throw new Error(finalizeData.error || 'Failed to finalize purchase on server');
+        }
+
+        // Save last4 and transaction id for receipt
+        last4FromPayment = paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.last4 || '';
+        lastTransactionId = paymentIntent.id || (finalizeData.payment && finalizeData.payment.charge_id) || '';
+
+        // Hide modal, show receipt
         hidePaymentModal();
-        showReceiptModal();
-        
-        // Add success message to chat
-        addMessage('TripKaki', '🎉 Payment successful! Your travel insurance policy is now active. You can find your e-receipt and policy documents above. Have a safe trip!', 'assistant');
-    }, 2000);
+
+        // If backend returned policy info, show it in chat
+        if (finalizeData.status === 'paid') {
+            addMessage('🎉 Payment successful! Your travel insurance policy is now active. You can download your e-receipt below.', 'assistant');
+            // Update currentPaymentData from server response if available
+            if (finalizeData.policy_number) {
+                currentPaymentData.policy_number = finalizeData.policy_number;
+            }
+            showReceiptModal();
+            earnRewards(100);
+        } else {
+            addMessage('Payment succeeded but server could not finalize purchase. Please contact support.', 'assistant');
+        }
+
+    } catch (error) {
+        console.error('Payment error:', error);
+        alert('Payment failed: ' + (error.message || error));
+    } finally {
+        processPayment.disabled = false;
+        processPayment.querySelector('.btn-text').style.display = 'inline';
+        processPayment.querySelector('.btn-loading').style.display = 'none';
+    }
 }
 
 // Download Receipt as PDF
@@ -1565,14 +1656,11 @@ function downloadReceiptPDF() {
         doc.setFillColor(...primaryColor);
         doc.rect(0, 0, 210, 40, 'F');
         
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
-        doc.setFont('helvetica', 'bold');
-        doc.text('🛡️ TripKaki Insurance', 20, 25);
-        
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        doc.text('MSIG Intelligent Conversational Agent', 20, 32);
+    doc.setTextColor(255, 255, 255);
+    // Header: use MSIG branding only
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MSIG Intelligent Conversational Agent', 20, 28);
         
         // Receipt header
         doc.setTextColor(...textColor);
@@ -1743,18 +1831,7 @@ closeReceiptBtn.addEventListener('click', hideReceiptModal);
 downloadReceipt.addEventListener('click', downloadReceiptPDF);
 emailReceipt.addEventListener('click', emailReceiptToUser);
 
-// Form Input Formatting
-cardNumber.addEventListener('input', (e) => {
-    e.target.value = formatCardNumber(e.target.value);
-});
-
-expiryDate.addEventListener('input', (e) => {
-    e.target.value = formatExpiryDate(e.target.value);
-});
-
-cvv.addEventListener('input', (e) => {
-    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
-});
+// Note: card formatting handled by Stripe Elements; no direct input listeners required
 
 // Close modals when clicking outside
 paymentModalOverlay.addEventListener('click', (e) => {

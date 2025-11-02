@@ -12,6 +12,7 @@ import { MCPTools } from './services/mcpTools.js';
 import { ClaimsIntelligence } from './services/claimsIntelligence.js';
 import { GroqIntelligence } from './services/groqIntelligence.js';
 import { PolicyDatabase } from './services/policyDatabase.js';
+import { createPaymentIntent, retrievePaymentIntent } from './stripeService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -118,8 +119,30 @@ app.post('/api/session/:sessionId/payment', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
     
-    if (session.step !== 'payment') {
+    // Allow finalization if session is in 'payment' step OR a Stripe PaymentIntent was submitted
+    if (session.step !== 'payment' && !(payment_details && payment_details.stripePaymentIntentId)) {
       return res.status(400).json({ error: 'Not in payment step' });
+    }
+
+    // If Stripe payment intent was used, verify it succeeded before proceeding
+    if (payment_details && payment_details.stripePaymentIntentId) {
+      try {
+        const pi = await retrievePaymentIntent(payment_details.stripePaymentIntentId);
+        if (!pi || pi.status !== 'succeeded') {
+          return res.status(400).json({ error: 'Stripe payment not completed', status: pi ? pi.status : 'not_found' });
+        }
+        // Attach some payment info to the session for receipt generation
+        session.payment_info = {
+          provider: 'stripe',
+          payment_intent: pi.id,
+          charge_id: pi.charges?.data?.[0]?.id || null,
+          card_last4: pi.charges?.data?.[0]?.payment_method_details?.card?.last4 || null,
+          amount: pi.amount
+        };
+      } catch (e) {
+        console.error('Error verifying Stripe payment:', e);
+        return res.status(500).json({ error: 'Failed to verify Stripe payment' });
+      }
     }
     
     // Use MCP purchase tool
@@ -142,13 +165,29 @@ app.post('/api/session/:sessionId/payment', async (req, res) => {
         policy_number: purchaseResult.policy_number,
         policy_pdf_url: purchaseResult.policy_pdf_url,
         emergency_card_url: purchaseResult.emergency_card_url,
-        step: 'post_purchase'
+        step: 'post_purchase',
+        payment: session.payment_info || null
       });
     } else {
       res.status(400).json({ error: 'Payment failed', details: purchaseResult });
     }
   } catch (error) {
     console.error('Payment error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// Create a Stripe PaymentIntent and return client secret
+app.post('/api/create-payment-intent', async (req, res) => {
+  try {
+    const { amount, currency, receipt_email, session_id, metadata } = req.body;
+    if (!amount) return res.status(400).json({ error: 'amount is required (in cents)' });
+
+    const pi = await createPaymentIntent({ amount, currency: currency || 'sgd', receipt_email, metadata: { session_id, ...(metadata || {}) } });
+    res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
     res.status(500).json({ error: error.message });
   }
 });
