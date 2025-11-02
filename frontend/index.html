@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -334,6 +336,180 @@
             <div class="modal-footer">
                 <button class="modal-btn primary" id="submitVoiceReview">Submit Review</button>
                 <button class="modal-btn secondary" id="cancelVoiceReviewModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="paymentModalOverlay" style="display: none;">
+        <div class="modal-content payment-modal">
+            <div class="modal-header">
+                <h3>🛡️ Complete Your Travel Insurance Payment</h3>
+                <button class="modal-close" id="closePaymentModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-summary">
+                    <h4>Policy Summary</h4>
+                    <div class="policy-details">
+                        <div class="detail-row">
+                            <span>Destination:</span>
+                            <strong id="paymentDestination">Japan</strong>
+                        </div>
+                        <div class="detail-row">
+                            <span>Coverage:</span>
+                            <strong id="paymentCoverage">Comprehensive Travel Insurance</strong>
+                        </div>
+                        <div class="detail-row">
+                            <span>Duration:</span>
+                            <strong id="paymentDuration">7 days</strong>
+                        </div>
+                        <div class="detail-row">
+                            <span>Travelers:</span>
+                            <strong id="paymentTravelers">1 Adult</strong>
+                        </div>
+                        <div class="detail-row total-row">
+                            <span>Total Amount:</span>
+                            <strong id="paymentAmount">SGD $89.00</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="payment-form">
+                    <h4>💳 Payment Details</h4>
+                    <form id="paymentForm">
+                        <div class="form-group">
+                            <label for="cardNumber">Card Number</label>
+                            <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                            <div class="card-icons">
+                                <span>💳</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="expiryDate">Expiry Date</label>
+                                <input type="text" id="expiryDate" placeholder="MM/YY" maxlength="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="cvv">CVV</label>
+                                <input type="text" id="cvv" placeholder="123" maxlength="4">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cardholderName">Cardholder Name</label>
+                            <input type="text" id="cardholderName" placeholder="John Doe">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="billingEmail">Billing Email</label>
+                            <input type="email" id="billingEmail" placeholder="john@example.com">
+                        </div>
+                        
+                        <div class="security-info">
+                            <div class="security-badge">
+                                <span>🔒</span>
+                                <small>Your payment is secured by 256-bit SSL encryption</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary payment-btn" id="processPayment">
+                    <span class="btn-text">Pay SGD $89.00</span>
+                    <span class="btn-loading" style="display: none;">Processing...</span>
+                </button>
+                <button class="modal-btn secondary" id="cancelPayment">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Success & E-Receipt Modal -->
+    <div class="modal-overlay" id="receiptModalOverlay" style="display: none;">
+        <div class="modal-content receipt-modal">
+            <div class="modal-header success-header">
+                <div class="success-icon">✅</div>
+                <h3>Payment Successful!</h3>
+                <button class="modal-close" id="closeReceiptModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="receipt-content">
+                    <div class="receipt-header">
+                        <h4>🛡️ TripKaki Insurance - E-Receipt</h4>
+                        <p class="receipt-number">Receipt #TK-<span id="receiptNumber">240001</span></p>
+                        <p class="receipt-date">Date: <span id="receiptDate"></span></p>
+                    </div>
+                    
+                    <div class="receipt-details">
+                        <div class="section">
+                            <h5>Policy Information</h5>
+                            <div class="detail-row">
+                                <span>Policy Number:</span>
+                                <strong id="receiptPolicyNumber">MSIG-JP-240001</strong>
+                            </div>
+                            <div class="detail-row">
+                                <span>Destination:</span>
+                                <strong id="receiptDestination">Japan</strong>
+                            </div>
+                            <div class="detail-row">
+                                <span>Coverage Type:</span>
+                                <strong id="receiptCoverage">Comprehensive Travel Insurance</strong>
+                            </div>
+                            <div class="detail-row">
+                                <span>Coverage Period:</span>
+                                <strong id="receiptPeriod">7 days</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h5>Payment Summary</h5>
+                            <div class="detail-row">
+                                <span>Insurance Premium:</span>
+                                <span>SGD $79.00</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Service Fee:</span>
+                                <span>SGD $5.00</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>GST (8%):</span>
+                                <span>SGD $5.00</span>
+                            </div>
+                            <div class="detail-row total-row">
+                                <span><strong>Total Paid:</strong></span>
+                                <strong>SGD $89.00</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h5>Payment Method</h5>
+                            <div class="detail-row">
+                                <span>Card:</span>
+                                <strong>**** **** **** <span id="receiptCardLast4">3456</span></strong>
+                            </div>
+                            <div class="detail-row">
+                                <span>Transaction ID:</span>
+                                <strong id="receiptTransactionId">TXN-240001-789</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="section contact-info">
+                            <h5>Important Information</h5>
+                            <ul>
+                                <li>Your policy is active immediately upon payment</li>
+                                <li>Policy documents will be emailed to <strong id="receiptEmail">john@example.com</strong></li>
+                                <li>24/7 Emergency Assistance: +65 6123 4567</li>
+                                <li>Claims Hotline: +65 6789 0123</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary" id="downloadReceipt">📄 Download PDF</button>
+                <button class="modal-btn secondary" id="emailReceipt">📧 Email Receipt</button>
+                <button class="modal-btn secondary" id="closeReceiptBtn">Close</button>
             </div>
         </div>
     </div>

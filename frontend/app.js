@@ -600,6 +600,58 @@ function addMessage(text, type) {
     const formattedText = text.replace(/\n/g, '<br>');
     content.innerHTML = formattedText;
     
+    // Check if this is an assistant message about payment
+    if (type === 'assistant' && (
+        text.toLowerCase().includes('pay') ||
+        text.toLowerCase().includes('purchase') ||
+        text.toLowerCase().includes('buy') ||
+        text.toLowerCase().includes('payment') ||
+        text.toLowerCase().includes('proceed to checkout')
+    )) {
+        // Add payment button to assistant messages about payment
+        const paymentButton = document.createElement('button');
+        paymentButton.className = 'payment-trigger-btn';
+        paymentButton.innerHTML = '💳 Proceed to Payment';
+        paymentButton.style.cssText = `
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        `;
+        
+        paymentButton.addEventListener('click', () => {
+            // Extract payment details from the conversation context
+            const paymentDetails = {
+                destination: 'Japan', // You can make this dynamic based on chat context
+                coverage: 'Comprehensive Travel Insurance',
+                duration: '7 days',
+                travelers: '1 Adult',
+                amount: 'SGD $89.00'
+            };
+            triggerPayment(paymentDetails);
+        });
+        
+        paymentButton.addEventListener('mouseenter', () => {
+            paymentButton.style.transform = 'translateY(-2px)';
+            paymentButton.style.boxShadow = 'var(--shadow-lg)';
+        });
+        
+        paymentButton.addEventListener('mouseleave', () => {
+            paymentButton.style.transform = 'translateY(0)';
+            paymentButton.style.boxShadow = 'none';
+        });
+        
+        content.appendChild(paymentButton);
+    }
+    
     bubble.appendChild(content);
     messageDiv.appendChild(bubble);
     messagesContainer.appendChild(messageDiv);
@@ -1287,5 +1339,440 @@ function handleVoiceReview() {
     document.getElementById('voiceFeedback').value = '';
 }
 
+// Show initial travel insurance quick replies
+function showInitialQuickReplies() {
+    const initialReplies = [
+        '🇯🇵 I need travel insurance for Japan',
+        '📋 What does travel insurance cover?',  
+        '💰 How much does insurance cost?',
+        '🛒 I want to buy insurance now'
+    ];
+    
+    quickReplies.innerHTML = '';
+    
+    initialReplies.forEach(reply => {
+        const btn = document.createElement('button');
+        btn.className = 'quick-reply';
+        btn.textContent = reply;
+        btn.addEventListener('click', () => {
+            messageInput.value = reply;
+            sendMessage();
+        });
+        quickReplies.appendChild(btn);
+    });
+}
+
+// Show initial quick replies when page loads
+setTimeout(() => {
+    if (quickReplies && quickReplies.children.length === 0) {
+        showInitialQuickReplies();
+    }
+}, 1000);
+
 // Initialize wallet balance
 updateWallet();
+
+// ===============================================
+// PAYMENT & RECEIPT FUNCTIONALITY
+// ===============================================
+
+// Payment Modal Elements
+const paymentModalOverlay = document.getElementById('paymentModalOverlay');
+const closePaymentModal = document.getElementById('closePaymentModal');
+const cancelPayment = document.getElementById('cancelPayment');
+const processPayment = document.getElementById('processPayment');
+
+// Receipt Modal Elements
+const receiptModalOverlay = document.getElementById('receiptModalOverlay');
+const closeReceiptModal = document.getElementById('closeReceiptModal');
+const closeReceiptBtn = document.getElementById('closeReceiptBtn');
+const downloadReceipt = document.getElementById('downloadReceipt');
+const emailReceipt = document.getElementById('emailReceipt');
+
+// Payment Form Elements
+const cardNumber = document.getElementById('cardNumber');
+const expiryDate = document.getElementById('expiryDate');
+const cvv = document.getElementById('cvv');
+const cardholderName = document.getElementById('cardholderName');
+const billingEmail = document.getElementById('billingEmail');
+
+// Payment Data
+let currentPaymentData = {
+    destination: 'Japan',
+    coverage: 'Comprehensive Travel Insurance',
+    duration: '7 days',
+    travelers: '1 Adult',
+    amount: 'SGD $89.00'
+};
+
+// Show Payment Modal Function
+function showPaymentModal(paymentData = null) {
+    if (paymentData) {
+        currentPaymentData = { ...currentPaymentData, ...paymentData };
+        
+        // Update payment summary
+        document.getElementById('paymentDestination').textContent = currentPaymentData.destination;
+        document.getElementById('paymentCoverage').textContent = currentPaymentData.coverage;
+        document.getElementById('paymentDuration').textContent = currentPaymentData.duration;
+        document.getElementById('paymentTravelers').textContent = currentPaymentData.travelers;
+        document.getElementById('paymentAmount').textContent = currentPaymentData.amount;
+        
+        // Update payment button
+        processPayment.querySelector('.btn-text').textContent = `Pay ${currentPaymentData.amount}`;
+    }
+    
+    paymentModalOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Hide Payment Modal Function
+function hidePaymentModal() {
+    paymentModalOverlay.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    
+    // Reset form
+    document.getElementById('paymentForm').reset();
+    processPayment.disabled = false;
+    processPayment.querySelector('.btn-text').style.display = 'inline';
+    processPayment.querySelector('.btn-loading').style.display = 'none';
+}
+
+// Show Receipt Modal Function
+function showReceiptModal() {
+    const now = new Date();
+    const receiptNumber = Math.floor(Math.random() * 900000) + 100000;
+    const policyNumber = `MSIG-${currentPaymentData.destination.substring(0,2).toUpperCase()}-${receiptNumber}`;
+    const transactionId = `TXN-${receiptNumber}-${Math.floor(Math.random() * 1000)}`;
+    
+    // Update receipt details
+    document.getElementById('receiptNumber').textContent = receiptNumber;
+    document.getElementById('receiptDate').textContent = now.toLocaleString();
+    document.getElementById('receiptPolicyNumber').textContent = policyNumber;
+    document.getElementById('receiptDestination').textContent = currentPaymentData.destination;
+    document.getElementById('receiptCoverage').textContent = currentPaymentData.coverage;
+    document.getElementById('receiptPeriod').textContent = currentPaymentData.duration;
+    document.getElementById('receiptTransactionId').textContent = transactionId;
+    document.getElementById('receiptEmail').textContent = billingEmail.value;
+    
+    // Update card details (last 4 digits)
+    const cardNum = cardNumber.value.replace(/\s/g, '');
+    const last4 = cardNum.slice(-4);
+    document.getElementById('receiptCardLast4').textContent = last4;
+    
+    receiptModalOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Hide Receipt Modal Function
+function hideReceiptModal() {
+    receiptModalOverlay.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Format Card Number Input
+function formatCardNumber(input) {
+    let value = input.replace(/\D/g, '');
+    value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+    return value;
+}
+
+// Format Expiry Date Input
+function formatExpiryDate(input) {
+    let value = input.replace(/\D/g, '');
+    if (value.length >= 2) {
+        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+    }
+    return value;
+}
+
+// Validate Payment Form
+function validatePaymentForm() {
+    const cardNum = cardNumber.value.replace(/\s/g, '');
+    const expiry = expiryDate.value;
+    const cvvValue = cvv.value;
+    const name = cardholderName.value.trim();
+    const email = billingEmail.value.trim();
+    
+    if (cardNum.length < 13 || cardNum.length > 19) return false;
+    if (!/^\d{2}\/\d{2}$/.test(expiry)) return false;
+    if (cvvValue.length < 3 || cvvValue.length > 4) return false;
+    if (name.length < 2) return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+    
+    return true;
+}
+
+// Process Payment
+async function handlePayment() {
+    if (!validatePaymentForm()) {
+        alert('Please fill in all payment details correctly.');
+        return;
+    }
+    
+    // Show loading state
+    processPayment.disabled = true;
+    processPayment.querySelector('.btn-text').style.display = 'none';
+    processPayment.querySelector('.btn-loading').style.display = 'inline';
+    
+    // Simulate payment processing
+    setTimeout(() => {
+        hidePaymentModal();
+        showReceiptModal();
+        
+        // Add success message to chat
+        addMessage('TripKaki', '🎉 Payment successful! Your travel insurance policy is now active. You can find your e-receipt and policy documents above. Have a safe trip!', 'assistant');
+    }, 2000);
+}
+
+// Download Receipt as PDF
+function downloadReceiptPDF() {
+    // Show loading state
+    downloadReceipt.disabled = true;
+    downloadReceipt.innerHTML = '📄 Generating PDF...';
+    
+    try {
+        // Get receipt data
+        const receiptNumber = document.getElementById('receiptNumber').textContent;
+        const receiptDate = document.getElementById('receiptDate').textContent;
+        const policyNumber = document.getElementById('receiptPolicyNumber').textContent;
+        const destination = document.getElementById('receiptDestination').textContent;
+        const coverage = document.getElementById('receiptCoverage').textContent;
+        const period = document.getElementById('receiptPeriod').textContent;
+        const transactionId = document.getElementById('receiptTransactionId').textContent;
+        const email = document.getElementById('receiptEmail').textContent;
+        const cardLast4 = document.getElementById('receiptCardLast4').textContent;
+        const customerName = cardholderName.value;
+        
+        // Create new PDF document
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Set document properties
+        doc.setProperties({
+            title: `TripKaki Receipt ${receiptNumber}`,
+            subject: 'Travel Insurance Receipt',
+            author: 'TripKaki',
+            keywords: 'travel insurance, receipt, MSIG'
+        });
+        
+        // Colors
+        const primaryColor = [79, 70, 229]; // Indigo
+        const secondaryColor = [20, 184, 166]; // Teal
+        const textColor = [31, 41, 55]; // Gray-800
+        const lightColor = [107, 114, 128]; // Gray-500
+        
+        // Header with logo and company info
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('🛡️ TripKaki Insurance', 20, 25);
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text('MSIG Intelligent Conversational Agent', 20, 32);
+        
+        // Receipt header
+        doc.setTextColor(...textColor);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('E-RECEIPT', 20, 55);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...lightColor);
+        doc.text(`Receipt #TK-${receiptNumber}`, 20, 62);
+        doc.text(`Date: ${receiptDate}`, 20, 68);
+        
+        // Customer Information
+        let yPos = 85;
+        doc.setTextColor(...textColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Customer Information', 20, yPos);
+        
+        yPos += 8;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Name: ${customerName}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Email: ${email}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Payment Method: **** **** **** ${cardLast4}`, 25, yPos);
+        
+        // Policy Information
+        yPos += 15;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Policy Information', 20, yPos);
+        
+        yPos += 8;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Policy Number: ${policyNumber}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Destination: ${destination}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Coverage Type: ${coverage}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Coverage Period: ${period}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Transaction ID: ${transactionId}`, 25, yPos);
+        
+        // Payment Summary Box
+        yPos += 20;
+        doc.setFillColor(248, 250, 255);
+        doc.setDrawColor(...primaryColor);
+        doc.roundedRect(20, yPos - 5, 170, 35, 3, 3, 'FD');
+        
+        doc.setTextColor(...primaryColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Payment Summary', 25, yPos + 5);
+        
+        doc.setTextColor(...textColor);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Insurance Premium:', 25, yPos + 12);
+        doc.text('SGD $79.00', 160, yPos + 12, { align: 'right' });
+        
+        doc.text('Service Fee:', 25, yPos + 18);
+        doc.text('SGD $5.00', 160, yPos + 18, { align: 'right' });
+        
+        doc.text('GST (8%):', 25, yPos + 24);
+        doc.text('SGD $5.00', 160, yPos + 24, { align: 'right' });
+        
+        // Total amount
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('TOTAL PAID:', 25, yPos + 32);
+        doc.text('SGD $89.00', 160, yPos + 32, { align: 'right' });
+        
+        // Important Information
+        yPos += 50;
+        doc.setTextColor(...primaryColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Important Information', 20, yPos);
+        
+        yPos += 8;
+        doc.setTextColor(...textColor);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        const infoLines = [
+            '• Your policy is active immediately upon payment',
+            '• Policy documents will be emailed to your registered address',
+            '• 24/7 Emergency Assistance: +65 6123 4567',
+            '• Claims Hotline: +65 6789 0123',
+            '• Keep this receipt for your records'
+        ];
+        
+        infoLines.forEach(line => {
+            doc.text(line, 25, yPos);
+            yPos += 5;
+        });
+        
+        // Footer
+        yPos = 280;
+        doc.setFillColor(...secondaryColor);
+        doc.rect(0, yPos, 210, 17, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('TripKaki - Your Trusted Travel Insurance Partner | support@tripkaki.com | www.tripkaki.com', 105, yPos + 10, { align: 'center' });
+        
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `TripKaki-Receipt-${receiptNumber}-${timestamp}.pdf`;
+        
+        // Save the PDF
+        doc.save(filename);
+        
+        // Reset button state
+        downloadReceipt.disabled = false;
+        downloadReceipt.innerHTML = '📄 Download PDF';
+        
+        // Show success message
+        setTimeout(() => {
+            alert('✅ Receipt downloaded successfully! Check your Downloads folder.');
+        }, 500);
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        
+        // Reset button state
+        downloadReceipt.disabled = false;
+        downloadReceipt.innerHTML = '📄 Download PDF';
+        
+        alert('❌ Error generating PDF. Please try again or take a screenshot of the receipt.');
+    }
+}
+
+// Email Receipt Function
+function emailReceiptToUser() {
+    const email = billingEmail.value;
+    const receiptNumber = document.getElementById('receiptNumber').textContent;
+    
+    // Show processing state
+    emailReceipt.disabled = true;
+    emailReceipt.innerHTML = '📧 Sending...';
+    
+    // Simulate email sending
+    setTimeout(() => {
+        // Reset button
+        emailReceipt.disabled = false;
+        emailReceipt.innerHTML = '📧 Email Receipt';
+        
+        // Show success message
+        alert(`✅ Receipt #TK-${receiptNumber} has been sent to ${email}\n\nPlease check your inbox (and spam folder) for the email receipt with your policy documents.`);
+    }, 2000);
+}
+
+// Event Listeners for Payment Modal
+closePaymentModal.addEventListener('click', hidePaymentModal);
+cancelPayment.addEventListener('click', hidePaymentModal);
+processPayment.addEventListener('click', handlePayment);
+
+// Event Listeners for Receipt Modal
+closeReceiptModal.addEventListener('click', hideReceiptModal);
+closeReceiptBtn.addEventListener('click', hideReceiptModal);
+downloadReceipt.addEventListener('click', downloadReceiptPDF);
+emailReceipt.addEventListener('click', emailReceiptToUser);
+
+// Form Input Formatting
+cardNumber.addEventListener('input', (e) => {
+    e.target.value = formatCardNumber(e.target.value);
+});
+
+expiryDate.addEventListener('input', (e) => {
+    e.target.value = formatExpiryDate(e.target.value);
+});
+
+cvv.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+});
+
+// Close modals when clicking outside
+paymentModalOverlay.addEventListener('click', (e) => {
+    if (e.target === paymentModalOverlay) {
+        hidePaymentModal();
+    }
+});
+
+receiptModalOverlay.addEventListener('click', (e) => {
+    if (e.target === receiptModalOverlay) {
+        hideReceiptModal();
+    }
+});
+
+// Function to trigger payment from chat
+function triggerPayment(paymentDetails = null) {
+    showPaymentModal(paymentDetails);
+}
+
+// Make payment function available globally
+window.triggerPayment = triggerPayment;
