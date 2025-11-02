@@ -1179,6 +1179,7 @@ function toggleMobileMenu() {
 }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 // Mute Functions
 function toggleMute() {
     isMuted = !isMuted;
@@ -1323,6 +1324,8 @@ setTimeout(() => {
     }
 }, 1000);
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 // Initialize wallet balance
