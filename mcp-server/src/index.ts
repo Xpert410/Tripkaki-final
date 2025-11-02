@@ -850,11 +850,7 @@ class LEAInsuranceMCPServer {
 
     // This would integrate with your claims database analysis
     // Mock insights based on common patterns
-    const insights: {
-      risk_summary: string;
-      recommendations: string[];
-      claim_predictions: any;
-    } = {
+    const insights = {
       risk_summary: '',
       recommendations: [],
       claim_predictions: {}
@@ -867,14 +863,14 @@ class LEAInsuranceMCPServer {
         "Consider Gold plan minimum for SGD 100,000 medical coverage",
         "Add Adventure Sports rider for off-piste coverage", 
         "Winter weather increases flight delay risks by 40%"
-      ] as string[];
+      ];
     } else if (activities.includes('diving')) {
       insights.risk_summary = "🤿 **Diving Activity Detected:** Scuba diving increases medical claim likelihood by 15%. Most common: decompression issues requiring specialized treatment.";
       insights.recommendations = [
         "Ensure hyperbaric chamber coverage included",
         "Verify diving depth limits in your policy",
         "Consider evacuation coverage for remote dive sites"
-      ] as string[];
+      ];
     }
 
     return insights;

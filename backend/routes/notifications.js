@@ -6,7 +6,7 @@ const router = express.Router();
 // Configure DynamoDB
 const dynamodb = new AWS.DynamoDB.DocumentClient({
     region: process.env.AWS_REGION || 'ap-southeast-1',
-    endpoint: process.env.DDB_ENDPOINT || 'http://localhost:8001',
+    endpoint: process.env.DDB_ENDPOINT || 'http://localhost:8000',
     accessKeyId: 'dummy',
     secretAccessKey: 'dummy'
 });

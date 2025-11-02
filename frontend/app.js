@@ -4,12 +4,37 @@ let sessionId = null;
 let walletBalance = 0;
 let isCrisisMode = false;
 
-// DOM Elements - Will be initialized after DOM loads
-let messagesContainer, messageInput, sendButton, actionButtons, confirmButton, paymentButton;
-let avatarStatus, fileUploadArea, fileInput, uploadButton, fileName, modeIndicator, modeText;
-let walletAmount, walletBalanceEl, careerContent, quickReplies, excerptContent, statsContent;
-let timelineContent, ttsAudio, micButton, avatarEmoji, avatarMouth, avatarCustomizeBtn;
-let avatarModalOverlay, closeAvatarModal, cancelAvatarModal, voiceMuteBtn, muteIcon;
+// DOM Elements
+const messagesContainer = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendButton = document.getElementById('sendButton');
+const actionButtons = document.getElementById('actionButtons');
+const confirmButton = document.getElementById('confirmButton');
+const paymentButton = document.getElementById('paymentButton');
+const avatarStatus = document.getElementById('avatarStatus');
+const fileUploadArea = document.getElementById('fileUploadArea');
+const fileInput = document.getElementById('fileInput');
+const uploadButton = document.getElementById('uploadButton');
+const fileName = document.getElementById('fileName');
+const modeIndicator = document.getElementById('modeIndicator');
+const modeText = document.getElementById('modeText');
+const walletAmount = document.getElementById('walletAmount');
+const walletBalanceEl = document.getElementById('walletBalance');
+const careerContent = document.getElementById('careerContent');
+const quickReplies = document.getElementById('quickReplies');
+const excerptContent = document.getElementById('excerptContent');
+const statsContent = document.getElementById('statsContent');
+const timelineContent = document.getElementById('timelineContent');
+const ttsAudio = document.getElementById('ttsAudio');
+const micButton = document.getElementById('micButton');
+const avatarEmoji = document.getElementById('avatarEmoji');
+const avatarMouth = document.getElementById('avatarMouth');
+const avatarCustomizeBtn = document.getElementById('avatarCustomizeBtn');
+const avatarModalOverlay = document.getElementById('avatarModalOverlay');
+const closeAvatarModal = document.getElementById('closeAvatarModal');
+const cancelAvatarModal = document.getElementById('cancelAvatarModal');
+const voiceMuteBtn = document.getElementById('voiceMuteBtn');
+const muteIcon = document.getElementById('muteIcon');
 
 // Speech Recognition State
 let recognition = null;
@@ -20,79 +45,19 @@ let isMuted = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize DOM elements after DOM is loaded
-    messagesContainer = document.getElementById('messages');
-    messageInput = document.getElementById('messageInput');
-    sendButton = document.getElementById('sendButton');
-    actionButtons = document.getElementById('actionButtons');
-    confirmButton = document.getElementById('confirmButton');
-    paymentButton = document.getElementById('paymentButton');
-    avatarStatus = document.getElementById('avatarStatus');
-    fileUploadArea = document.getElementById('fileUploadArea');
-    fileInput = document.getElementById('fileInput');
-    uploadButton = document.getElementById('uploadButton');
-    fileName = document.getElementById('fileName');
-    modeIndicator = document.getElementById('modeIndicator');
-    modeText = document.getElementById('modeText');
-    walletAmount = document.getElementById('walletAmount');
-    walletBalanceEl = document.getElementById('walletBalance');
-    careerContent = document.getElementById('careerContent');
-    quickReplies = document.getElementById('quickReplies');
-    excerptContent = document.getElementById('excerptContent');
-    statsContent = document.getElementById('statsContent');
-    timelineContent = document.getElementById('timelineContent');
-    ttsAudio = document.getElementById('ttsAudio');
-    micButton = document.getElementById('micButton');
-    avatarEmoji = document.getElementById('avatarEmoji');
-    avatarMouth = document.getElementById('avatarMouth');
-    avatarCustomizeBtn = document.getElementById('avatarCustomizeBtn');
-    avatarModalOverlay = document.getElementById('avatarModalOverlay');
-    closeAvatarModal = document.getElementById('closeAvatarModal');
-    cancelAvatarModal = document.getElementById('cancelAvatarModal');
-    voiceMuteBtn = document.getElementById('voiceMuteBtn');
-    muteIcon = document.getElementById('muteIcon');
-
-    // Add event listeners after DOM elements are initialized
-    if (messageInput) {
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-        // Focus the input so user can start typing immediately
-        messageInput.focus();
-        
-        // Add a placeholder to confirm it's working
-        messageInput.placeholder = "âœ… Chat is ready! Type your message...";
-        
-        console.log('ðŸ›¡ï¸ LEA Chat initialized successfully!');
-        console.log('ðŸ“ Message input:', messageInput ? 'Found' : 'Not found');
-        console.log('ðŸ“¤ Send button:', sendButton ? 'Found' : 'Not found');
-        console.log('ðŸ’¬ Messages container:', messagesContainer ? 'Found' : 'Not found');
-        
-        // Add initial quick replies to help users get started
-        if (quickReplies) {
-            showInitialQuickReplies();
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
         }
-    }
+    });
     
-    if (sendButton) {
-        sendButton.addEventListener('click', sendMessage);
-    }
-    
-    if (confirmButton) {
-        confirmButton.addEventListener('click', handleConfirm);
-    }
-    
-    if (paymentButton) {
-        paymentButton.addEventListener('click', handlePayment);
-    }
+    sendButton.addEventListener('click', sendMessage);
+    confirmButton.addEventListener('click', handleConfirm);
+    paymentButton.addEventListener('click', handlePayment);
     
     // File upload handlers
-    if (uploadButton && fileInput) {
-        uploadButton.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileUpload);
-    }
+    uploadButton.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileUpload);
     
     // Block handlers
     document.querySelectorAll('.block-item').forEach(item => {
@@ -1042,38 +1007,6 @@ function stopLipSync() {
     }
 }
 
-// Initial Quick Replies for new users
-function showInitialQuickReplies() {
-    const initialReplies = [
-        'ðŸ‡¯ðŸ‡µ I need travel insurance for Japan',
-        'ðŸ“‹ What does travel insurance cover?',
-        'ðŸ“Š Compare insurance plans',
-        'ðŸ’³ I want to buy insurance now'
-    ];
-    
-    displayQuickReplies(initialReplies);
-}
-
-// Display quick reply buttons
-function displayQuickReplies(replies) {
-    if (!quickReplies) return;
-    
-    quickReplies.innerHTML = '';
-    
-    replies.forEach(reply => {
-        const btn = document.createElement('button');
-        btn.className = 'quick-reply';
-        btn.textContent = reply;
-        btn.addEventListener('click', () => {
-            if (messageInput) {
-                messageInput.value = reply;
-                sendMessage();
-            }
-        });
-        quickReplies.appendChild(btn);
-    });
-}
-
 // Quick Replies
 function showQuickReplies(step) {
     const replies = {
@@ -1479,11 +1412,11 @@ async function pollPaymentStatus(sessionId) {
 function showPolicyConfirmation(policyNumber, policyPdfUrl) {
     const confirmationHTML = `
         <div class="policy-confirmation">
-            <h3>ï¿½ï¿½ï¿½ You're Covered!</h3>
+            <h3>í¾‰ You're Covered!</h3>
             <p><strong>Policy Number:</strong> ${policyNumber}</p>
             <p>Your travel insurance is now active.</p>
             <a href="${policyPdfUrl}" target="_blank" class="policy-link">
-                ï¿½ï¿½ï¿½ Download Policy Document
+                í³„ Download Policy Document
             </a>
             <p><em>You can now ask me questions about your coverage!</em></p>
         </div>
